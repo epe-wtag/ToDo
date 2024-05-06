@@ -1,0 +1,21 @@
+# Byte-compiled / optimized Python files
+__pycache__/
+*.pyc
+
+# Local development environment
+.env
+
+# IDE files
+.vscode/
+.idea/
+
+# Python environment
+venv/
+env/
+
+# Log files
+*.log
+
+# Dependency directories
+node_modules/
+pg_data/
