@@ -14,6 +14,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     id: Optional[int]
     created_at: Optional[datetime]
+    password: str
+    role: str
 
 
 class UserInResponse(UserBase):
