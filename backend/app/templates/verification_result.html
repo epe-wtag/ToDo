@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verification Result</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 300px;
+        }
+        .success-message {
+            color: green;
+        }
+        .error-message {
+            color: red;
+        }
+        .icon {
+            font-size: 75px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    {% if verification_result %}
+        <i class="icon fas fa-check-circle" style="color: green;"></i>
+        <h1 class="success-message">Email Verified Successfully!</h1>
+        <p>Your email has been successfully verified.</p>
+    {% else %}
+        <i class="icon fas fa-times-circle"  style="color: red;"></i>
+        <h1 class="error-message">Verification Failed!</h1>
+        <p>Invalid token or email.</p>
+    {% endif %}
+</body>
+</html>
