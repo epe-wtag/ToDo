@@ -1,7 +1,6 @@
 import json
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
-from httpx import request
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -127,9 +126,6 @@ async def get_user(id: int, db: AsyncSession = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get user: {str(e)}",
         )
-
-
-
 
 
 @router.post("/login", status_code=status.HTTP_200_OK)

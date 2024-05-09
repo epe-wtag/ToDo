@@ -82,7 +82,7 @@ async def simple_send(email: EmailStr, token: str) -> JSONResponse:
     html = f"""
     <h3>This Token will be valid for 30 minutes only.</h3> 
     <br>
-    <p>Your verification token is: {button_html}</p>
+    <p>Click to Verify: {button_html}</p>
     """
 
     message = MessageSchema(
@@ -95,8 +95,6 @@ async def simple_send(email: EmailStr, token: str) -> JSONResponse:
     fm = FastMail(conf)
     await fm.send_message(message)
     return JSONResponse(status_code=200, content={"message": "email has been sent"})
-
-
 
 
 def verify_token(email: str, token: str) -> bool:
