@@ -1,0 +1,85 @@
+/* Update create-user-container styles */
+.create-user-container {
+    width: 90%; /* Adjusted for responsiveness */
+    max-width: 500px;
+    margin: 0 50px;
+    margin-top: 9%; /* Center vertically and horizontally */
+    padding: 15px 40px 40px;
+    border: 1px solid #ccc;
+    border-radius: 15px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.4);
+    animation: movememt 2s alternate forwards;
+}
+
+/* Update create-user-form styles */
+.create-user-form {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Update create-user-form input styles */
+.create-user-form input {
+    margin-bottom: 15px;
+    margin-top: 5px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* Update create-user-form button styles */
+.create-user-form button {
+    padding: 10px;
+    background-color: #f38181;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.create-user-form button:hover {
+    background-color: #e65e5e;
+    font-size: 14px;
+}
+
+/* Update create-user-container p styles */
+.create-user-container p {
+    margin-top: 20px;
+}
+
+/* Update create-user-container p a styles */
+.create-user-container p a {
+    color: #e65e5e;
+    text-decoration: underline; 
+    cursor: pointer;
+}
+
+.create-user-container p a:hover {
+    color: #e43838;
+}
+
+/* Keyframes remain the same */
+@keyframes movememt {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(100%); 
+    }
+}
+
+
+@media screen and (max-width: 1725px) {
+    .create-user-container {
+        margin: 9% auto; 
+        animation: none;
+    }
+}
+
+
+@media screen and (max-width: 360px) {
+    .create-user-container {
+        margin: auto; 
+        animation: none;
+    }
+}
