@@ -48,7 +48,7 @@ const Signup = () => {
             
 
             try {
-                const response = await fetch('http://0.0.0.0:8000/api/v1/auth/create-user/', requestOption);
+                const response = await fetch('/api/v1/auth/create-user/', requestOption);
                 const responseData = await response.text();
                 const jsonResponse = JSON.parse(responseData);
                 console.log('success', jsonResponse);

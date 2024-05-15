@@ -11,6 +11,7 @@ from starlette.responses import JSONResponse
 
 from app.schema.auth_schema import TokenData
 
+
 load_dotenv()
 
 
@@ -33,6 +34,8 @@ app = FastAPI()
 bearer_scheme = HTTPBearer()
 
 SECRET_KEY = os.getenv("SECRET_KEY")
+VERIFICATION_KEY = os.getenv("VERIFICATION_KEY")
+RESET_PASSWORD_KEY = os.getenv("RESET_PASSWORD_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 180
 TOKEN_EXPIRE_MINUTES = 30
@@ -47,11 +50,11 @@ def create_access_token(data: dict, secret_key: str = SECRET_KEY) -> str:
 def generate_verification_token(email: str) -> str:
     expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     payload = {"email": email, "exp": expiration_time}
-    token = jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    token = jwt.encode(payload, VERIFICATION_KEY, algorithm=ALGORITHM)
     return token
 
 
-def get_token_data(token: str = Cookie(None)) -> TokenData:
+def get_token_data(token: str = Cookie('token', secure=True, httponly=True)) -> TokenData:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return TokenData(id=str(payload.get("user_id")), role=str(payload.get("role")))
@@ -67,6 +70,38 @@ def get_token_data(token: str = Cookie(None)) -> TokenData:
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+def generate_reset_token(email: str) -> str:
+    expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    payload = {"email": email, "exp": expiration_time}
+    token = jwt.encode(payload, RESET_PASSWORD_KEY, algorithm=ALGORITHM)
+    return token
+
+
+
+async def send_reset_email(email: EmailStr, token: str) -> JSONResponse:
+    html = f"""
+    <html>
+      <head></head>
+      <body>
+        <p>Hello,</p>
+        <p>You have requested to reset your password. Please click the link below to reset your password:</p>
+        <p><a style="background-color: #008CBA; border: none; color: white; padding: 15px 32px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer;"
+        href="http://localhost:3000/reset-password/{email}/{token}">Reset Password</a></p>
+        <p>If you did not request a password reset, please ignore this email.</p>
+      </body>
+    </html>
+    """
+
+    message = MessageSchema(
+        subject="Reset Password",
+        recipients=[email],
+        body=html,
+        subtype=MessageType.html,
+    )
+    fm = FastMail(conf)
+    await fm.send_message(message)
+    return JSONResponse(status_code=200, content={"message": "email has been sent"})
 
 
 async def simple_send(email: EmailStr, token: str) -> JSONResponse:
@@ -99,7 +134,7 @@ async def simple_send(email: EmailStr, token: str) -> JSONResponse:
 
 def verify_token(email: str, token: str) -> bool:
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, VERIFICATION_KEY, algorithms=[ALGORITHM])
         response_email = payload.get("email")
         expiration = payload.get("exp")
         if not response_email or not expiration:
@@ -109,6 +144,27 @@ def verify_token(email: str, token: str) -> bool:
             return False
         return response_email == email
     except jwt.JWTError:
+        return False
+    
+    
+    
+def verify_reset_token(email: str, token: str) -> bool:
+    try:
+        payload = jwt.decode(token, RESET_PASSWORD_KEY, algorithms=[ALGORITHM])
+        response_email = payload.get("email")
+        expiration = payload.get("exp")
+        
+        if response_email != email:
+            return False
+        
+        if expiration < datetime.utcnow().timestamp():
+            return False
+        
+        return True
+        
+    except jwt.ExpiredSignatureError:
+        return False
+    except jwt.InvalidTokenError:
         return False
 
 

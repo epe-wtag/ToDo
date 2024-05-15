@@ -13,25 +13,39 @@
     margin-bottom: 20px;
   }
 
+  .button-container {
+    position: relative;
+  }
+  
   .login_button {
-    padding: 15px;
-    background-color: #2399b6;
+    background-color: #318f77;
     color: white;
+    padding: 15px 35px;
     font-size: 20px;
     font-weight: bold;
-    text-decoration: none;
+    border: none;
     border-radius: 15%;
-    
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s ease;
   }
-
-  .login_button:hover{
-    padding: 15px;
+  
+  .login_button:hover {
+    padding: 15px 100px;
     background-color: #158166;
     color: white;
     font-weight:initial;
-    
   }
   
+  .emoji {
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 25px; 
+  }
+  
+  
 .imageClass {
-  margin-bottom: 30px;
+  margin-bottom: 0;
 }
