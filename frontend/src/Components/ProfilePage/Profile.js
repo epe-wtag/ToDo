@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './Profile.css';
 import Sidebar from '../CommonComponents/Sidebar';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { useCookies } from 'react-cookie';
 
@@ -11,10 +11,10 @@ import Swal from 'sweetalert2';
 
 const Profile = () => {
 
-  const navigate = useNavigate();
 
 
   const [credentials_, ,] = useCookies();
+
 
   const [showModal, setShowModal] = useState(false);
   const [userData, setUserData] = useState({});
@@ -55,7 +55,7 @@ const Profile = () => {
     }
   };
 
-  
+
 
 
   const handleFormSubmit = async (e) => {
@@ -67,15 +67,14 @@ const Profile = () => {
     formData.append('last_name', newUserData.last_name);
     formData.append('contact_number', newUserData.contact_number);
 
-    console.log(formData.get('username'));
 
-    
+
     let requestOption = {
       method: 'PUT',
       body: formData,
       redirect: 'follow',
       credentials: "include",
-  }
+    }
 
     try {
       const response = await fetch(`/api/v1/auth/user/${credentials_.id}`, requestOption);
@@ -98,7 +97,7 @@ const Profile = () => {
   };
 
 
-  
+
 
   const formatDate = (dateString) => new Date(dateString).toLocaleDateString();
 
@@ -119,13 +118,13 @@ const Profile = () => {
         <hr />
         <div className="profile-details">
           <div className="profile-avatar-side">
+          <h2 className="h2-text">{userData.username}</h2>
             <div className="profile-avatar">
               {userData.gender === 'female' ? (
                 <img src={gif_img_female} alt="Profile Avatar" />
               ) : (
                 <img src={gif_img_male} alt="Profile Avatar" />
               )}
-
             </div>
             <div className="button-container">
               <Link className='password-button' to="/change-password">

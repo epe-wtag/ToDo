@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.task import router as task_router
 

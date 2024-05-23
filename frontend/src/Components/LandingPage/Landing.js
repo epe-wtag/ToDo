@@ -1,18 +1,19 @@
 import React from 'react';
 import './Landing.css';
-import { Link, useNavigate } from 'react-router-dom'; 
-import gif_img from '../../assets/images/todo1.gif';
+import { Link } from 'react-router-dom';
+import gif_img from '../../assets/images/todo_logo.png';
 
 function Landing() {
   return (
     <div className="landing">
-      <h1>Welcome to My ToDo App!</h1>
+      <div className='logo-div'>
+        <div><img src={gif_img} alt='login' height="154px" width="154px" className='logo-imageClass' /></div>
+        <h1>TO-DO</h1>
+      </div>
       <p>Start organizing your tasks today.</p>
-      <div><img src={gif_img} alt='login' height="280px" width="450px" className='imageClass' /></div>
-      
       <div className="button-container">
         <Link className='login_button' to="/login">
-          <span className="emoji" role="img" aria-label="Emoji">😃</span> Start here
+           Start here
         </Link>
       </div>
     </div>

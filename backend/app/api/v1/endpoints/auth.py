@@ -1,32 +1,30 @@
 import json
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
+from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from fastapi.templating import Jinja2Templates
-
-from app.core.database import get_db
 from app.core.dependency import admin_check
 from app.core.security import (
     create_access_token,
+    generate_reset_token,
     generate_verification_token,
     get_current_user,
-    verify_reset_token,
-    generate_reset_token,
+    get_current_user_role,
     send_reset_email,
     simple_send,
+    verify_reset_token,
     verify_token,
 )
+from app.db.database import get_db
 from app.model.base_model import User
 from app.schema.auth_schema import UserInResponse
 from app.util.hash import async_hash_password, verify_password
+from logger import log
 
-router = APIRouter(
-    prefix="/auth",
-    tags=["Authentication:"],
-)
+router = APIRouter(prefix="/auth", tags=["Authentication:"])
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -47,11 +45,13 @@ async def create_user(
     gender: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
+    log.info(f"Attempting to create user: {username}, email: {email}")
     try:
         existing_username = await db.execute(
             select(User).where(User.username == username)
         )
         if existing_username.scalar():
+            log.warning(f"Username {username} already exists")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username already exists",
@@ -59,6 +59,7 @@ async def create_user(
 
         existing_email = await db.execute(select(User).where(User.email == email))
         if existing_email.scalar():
+            log.warning(f"Email {email} already exists")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists"
             )
@@ -82,9 +83,11 @@ async def create_user(
         await db.refresh(user)
         verification_token = generate_verification_token(email)
         await simple_send(email, verification_token)
+        log.info(f"User {username} created successfully with email {email}")
         return user
 
     except Exception as e:
+        log.error(f"Failed to create user: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create user: {str(e)}",
@@ -98,6 +101,7 @@ async def verify_email(
     v_token: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
+    log.info(f"Attempting to verify email: {email}")
     verification_result = verify_token(email, v_token)
 
     if verification_result:
@@ -105,6 +109,10 @@ async def verify_email(
         user_instance = user.scalar_one()
         user_instance.is_active = True
         await db.commit()
+        log.info(f"Email {email} verified successfully")
+    else:
+        log.warning(f"Failed to verify email: {email}")
+
     return templates.TemplateResponse(
         "verification_result.html",
         {"request": request, "verification_result": verification_result},
@@ -117,25 +125,27 @@ async def verify_email(
     response_model=UserInResponse,
 )
 async def get_user(
-    id: int, 
+    id: int,
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user),
-    admin: str = Depends(admin_check)
-    ):
+    admin: str = Depends(get_current_user_role),
+):
+    log.info(f"Fetching user with id: {id}")
     try:
         user = await db.get(User, id)
-        
-        
         if not user:
+            log.warning(f"User with id {id} does not exist")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"User with id: {id} does not exist",
             )
-            
-        if user_id == user.id or admin:
+
+        if int(user_id) == user.id or admin_check(admin):
+            log.success(f"User with id {id} fetched successfully")
             return user
 
     except Exception as e:
+        log.error(f"Failed to get user: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get user: {str(e)}",
@@ -156,20 +166,23 @@ async def update_user(
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user),
 ):
+    log.info(f"Attempting to update user with id: {id}")
     try:
         user = await db.get(User, id)
         if not user:
+            log.warning(f"User with id {id} does not exist")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"User with id: {id} does not exist",
             )
-            
+
         if int(user.id) == int(user_id):
             if username is not None and username != user.username:
                 existing_username = await db.execute(
                     select(User).where(User.username == username).where(User.id != id)
                 )
                 if existing_username.scalar():
+                    log.warning(f"Username {username} already exists")
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail="Username already exists",
@@ -186,14 +199,17 @@ async def update_user(
                 user.contact_number = contact_number
 
             await db.commit()
+            log.success(f"User with id {id} updated successfully")
             return user
         else:
+            log.warning(f"Unauthorized attempt to update user with id {id}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail=f"User with id: {id} does not exist",
             )
 
     except Exception as e:
+        log.error(f"Failed to update user: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to update user: {str(e)}",
@@ -206,16 +222,19 @@ async def login(
     password: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
+    log.info(f"Attempting login for email: {email}")
     try:
         user = await db.execute(select(User).filter(User.email == email))
         user = user.scalar_one()
 
         if not user or not verify_password(password, user.password):
+            log.warning(f"Invalid credentials for email: {email}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials"
             )
 
         if not user.is_active:
+            log.warning(f"Inactive user attempted login with email: {email}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="User is not active"
             )
@@ -234,18 +253,21 @@ async def login(
             key="token",
             value=access_token,
             httponly=True,
-            max_age=1800,
+            max_age=18000,
             samesite="none",
             secure=True,
         )
+        log.success(f"User with email {email} logged in successfully")
         return response
 
     except NoResultFound:
+        log.warning(f"User not found for email: {email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     except Exception as e:
+        log.error(f"Failed to log in: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to log in: {str(e)}",
@@ -254,27 +276,32 @@ async def login(
 
 @router.post("/logout", status_code=status.HTTP_200_OK)
 async def logout(response: Response):
+    log.info("Logging out user")
     response.delete_cookie("token")
     return {"message": "Logged out successfully"}
 
 
 @router.post("/forget-password", status_code=status.HTTP_200_OK)
 async def forget_password(email: str = Form(...), db: AsyncSession = Depends(get_db)):
+    log.info(f"Attempting to send password reset email to: {email}")
     try:
         user = await db.execute(select(User).filter(User.email == email))
         user = user.scalar_one()
 
         if not user:
+            log.warning(f"User not found for email: {email}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
             )
 
         reset_token = generate_reset_token(email)
         await send_reset_email(email, reset_token)
+        log.info(f"Password reset email sent successfully to: {email}")
 
         return {"message": "Password reset email sent successfully"}
 
     except Exception as e:
+        log.error(f"Failed to send reset email: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to send reset email: {str(e)}",
@@ -288,10 +315,12 @@ async def reset_password(
     token: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
+    log.info(f"Attempting to reset password for email: {email}")
     try:
         verification_result = verify_reset_token(email, token)
 
         if not verification_result:
+            log.warning(f"Invalid reset token for email: {email}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token"
             )
@@ -300,19 +329,21 @@ async def reset_password(
         user_instance = user.scalar_one()
 
         hashed_password = await async_hash_password(password)
-
         user_instance.password = hashed_password
 
         await db.commit()
+        log.info(f"Password reset successful for email: {email}")
 
         return {"message": "Password reset successful"}
 
     except NoResultFound:
+        log.warning(f"User not found for email: {email}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
 
     except Exception as e:
+        log.error(f"Failed to reset password: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to reset password: {str(e)}",
@@ -327,17 +358,22 @@ async def change_password(
     user_id: int = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    log.info(f"Attempting to change password for user_id: {user_id}")
     try:
         user_id = int(user_id)
         user = await db.execute(select(User).filter(User.id == user_id))
         user = user.scalar_one()
 
         if not user or not verify_password(old_password, user.password):
+            log.warning(f"Invalid old password for user_id: {user_id}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Password"
             )
 
         if not user.is_active:
+            log.warning(
+                f"Inactive user attempted password change for user_id: {user_id}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="User is not active"
             )
@@ -345,10 +381,12 @@ async def change_password(
         user.password = hashed_password
         await db.commit()
         response.delete_cookie("token")
+        log.info(f"Password changed successfully for user_id: {user_id}")
         return {"message": "Password changed successful"}
 
     except Exception as e:
+        log.error(f"Failed to change password: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"User not found at: {str(e)}",
+            detail=f"Failed to change password: {str(e)}",
         )

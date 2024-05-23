@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Signup.css';
-import { Link, useNavigate } from 'react-router-dom'; 
-import Swal from 'sweetalert2'; 
+import { Link, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 
 import gif_img from '../../assets/images/hi_there.gif';
 
@@ -10,7 +10,6 @@ const Signup = () => {
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState('');
     const [userName, setUserName] = useState('');
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -33,7 +32,7 @@ const Signup = () => {
             let formData = new FormData();
             formData.append('email', email);
             formData.append('password', password);
-            formData.append('role', role);
+            formData.append('role', 'user');
             formData.append('username', userName);
             formData.append('first_name', firstName);
             formData.append('last_name', lastName);
@@ -45,7 +44,7 @@ const Signup = () => {
                 body: formData,
                 redirect: 'follow'
             }
-            
+
 
             try {
                 const response = await fetch('/api/v1/auth/create-user/', requestOption);
@@ -53,11 +52,11 @@ const Signup = () => {
                 const jsonResponse = JSON.parse(responseData);
                 console.log('success', jsonResponse);
                 Swal.fire({
-                icon: 'success',
-                title: 'Please Verify your account via the email!',
-                showConfirmButton: false,
-                timer: 10000
-            });
+                    icon: 'success',
+                    title: 'Please Verify your account via the email!',
+                    showConfirmButton: false,
+                    timer: 4000
+                });
                 navigate('/login');
             } catch (error) {
                 console.log('Error: ', error);
@@ -75,6 +74,7 @@ const Signup = () => {
                 {currentStep === 1 && (
                     <>
                         <input
+                            className="user-create-input"
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -82,38 +82,21 @@ const Signup = () => {
                             required
                         />
                         <input
+                            className="user-create-input"
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="Password"
                             required
                         />
-                        <div>
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    value="admin"
-                                    checked={role === 'admin'}
-                                    onChange={() => setRole('admin')}
-                                />
-                                Admin
-                            </label>
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    value="client"
-                                    checked={role === 'client'}
-                                    onChange={() => setRole('client')}
-                                />
-                                Client
-                            </label>
-                        </div>
+
                         <button type="submit">Next</button>
                     </>
                 )}
                 {currentStep === 2 && (
                     <>
                         <input
+                            className="user-create-input"
                             type="text"
                             value={userName}
                             onChange={(e) => setUserName(e.target.value)}
@@ -121,6 +104,7 @@ const Signup = () => {
                             required
                         />
                         <input
+                            className="user-create-input"
                             type="text"
                             value={firstName}
                             onChange={(e) => setFirstName(e.target.value)}
@@ -128,6 +112,7 @@ const Signup = () => {
                             required
                         />
                         <input
+                            className="user-create-input"
                             type="text"
                             value={lastName}
                             onChange={(e) => setLastName(e.target.value)}
@@ -135,12 +120,14 @@ const Signup = () => {
                             required
                         />
                         <input
+                            className="user-create-input"
                             type="tel"
                             value={contactNumber}
                             onChange={(e) => setContactNumber(e.target.value)}
                             placeholder="Contact Number"
                             required
                         />
+                        <hr />
                         <div>
                             <label>
                                 <input
@@ -167,7 +154,7 @@ const Signup = () => {
             </form>
             <p>
                 Already have an account ? {" "}
-                <Link to="/login"> Sign in here</Link> 
+                <Link to="/login"> Sign in here</Link>
             </p>
         </div>
     );

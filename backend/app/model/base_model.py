@@ -1,8 +1,11 @@
+from enum import Enum as PyEnum
+
 from sqlalchemy import (
     TIMESTAMP,
     Boolean,
     Column,
     DateTime,
+    Enum,
     ForeignKey,
     Integer,
     String,
@@ -10,7 +13,13 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-from app.core.database import Base
+from app.db.database import Base
+
+
+class Category(PyEnum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
 
 
 class User(Base):
@@ -39,7 +48,11 @@ class Task(Base):
     description = Column(String)
     status = Column(Boolean, default=False)
     due_date = Column(DateTime)
+    delete_request = Column(Boolean, default=False)
+    reminder_sent = Column(Boolean, default=False)
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(TIMESTAMP, default=func.now(), nullable=False)
+    category = Column(Enum(Category), default=Category.LOW, nullable=False)
+    completed_at = Column(TIMESTAMP, nullable=True)
 
     owner = relationship("User", back_populates="tasks")

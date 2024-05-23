@@ -11,7 +11,6 @@ from starlette.responses import JSONResponse
 
 from app.schema.auth_schema import TokenData
 
-
 load_dotenv()
 
 
@@ -37,7 +36,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 VERIFICATION_KEY = os.getenv("VERIFICATION_KEY")
 RESET_PASSWORD_KEY = os.getenv("RESET_PASSWORD_KEY")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 180
+ACCESS_TOKEN_EXPIRE_MINUTES = 300
 TOKEN_EXPIRE_MINUTES = 30
 
 
@@ -54,7 +53,9 @@ def generate_verification_token(email: str) -> str:
     return token
 
 
-def get_token_data(token: str = Cookie('token', secure=True, httponly=True)) -> TokenData:
+def get_token_data(
+    token: str = Cookie("token", secure=True, httponly=True),
+) -> TokenData:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return TokenData(id=str(payload.get("user_id")), role=str(payload.get("role")))
@@ -71,12 +72,12 @@ def get_token_data(token: str = Cookie('token', secure=True, httponly=True)) -> 
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+
 def generate_reset_token(email: str) -> str:
     expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     payload = {"email": email, "exp": expiration_time}
     token = jwt.encode(payload, RESET_PASSWORD_KEY, algorithm=ALGORITHM)
     return token
-
 
 
 async def send_reset_email(email: EmailStr, token: str) -> JSONResponse:
@@ -145,23 +146,22 @@ def verify_token(email: str, token: str) -> bool:
         return response_email == email
     except jwt.JWTError:
         return False
-    
-    
-    
+
+
 def verify_reset_token(email: str, token: str) -> bool:
     try:
         payload = jwt.decode(token, RESET_PASSWORD_KEY, algorithms=[ALGORITHM])
         response_email = payload.get("email")
         expiration = payload.get("exp")
-        
+
         if response_email != email:
             return False
-        
+
         if expiration < datetime.utcnow().timestamp():
             return False
-        
+
         return True
-        
+
     except jwt.ExpiredSignatureError:
         return False
     except jwt.InvalidTokenError:
