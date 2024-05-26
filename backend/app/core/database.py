@@ -8,16 +8,17 @@ load_dotenv()
 
 
 DB_HOST = os.getenv("DB_HOST")
+DB_HOST_LOCAL = os.getenv("DB_HOST_local")
 DB_DATABASE = os.getenv("DB_DATABASE")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_URL = os.getenv("DB_URL")
+DB_URL = os.environ.get("DB_URL")
 
 print(DB_URL)
 if DB_URL:
-   URL_DATABASE = os.environ.get("DB_URL")
-else:
    URL_DATABASE = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_DATABASE}"
+else:
+   URL_DATABASE = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST_LOCAL}:5432/{DB_DATABASE}"
 
 
 engine = create_async_engine(
