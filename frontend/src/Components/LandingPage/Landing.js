@@ -10,7 +10,11 @@ function Landing() {
       <p>Start organizing your tasks today.</p>
       <div><img src={gif_img} alt='login' height="280px" width="450px" className='imageClass' /></div>
       
-      <Link className='login_button' to="/login"> Sign up here</Link>
+      <div className="button-container">
+        <Link className='login_button' to="/login">
+          <span className="emoji" role="img" aria-label="Emoji">😃</span> Start here
+        </Link>
+      </div>
     </div>
   );
 }

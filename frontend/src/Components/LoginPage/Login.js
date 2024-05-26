@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './Login.css';
 import { Link, useNavigate } from 'react-router-dom'; 
-// import { useCookies } from 'react-cookie';
+import { useCookies } from 'react-cookie';
 import Swal from 'sweetalert2'; 
 
 
@@ -14,8 +14,8 @@ const Login = () => {
     let navigate = useNavigate();
 
 
-    // const [role, setRole] = useCookies(['role']);
-    // const [token] = useCookies(['myToken']);
+    const [id, setId] = useCookies(['id']);
+    const [isAdmin, setIsAdmin] = useCookies(['is_admin']);
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -55,22 +55,21 @@ const Login = () => {
         
 
         try {
-            const response = await fetch('http://0.0.0.0:8000/api/v1/auth/login/', requestOption);
+            const response = await fetch('/api/v1/auth/login/', requestOption);
             const responseData = await response.text();
-            const cookie = response.headers.get('Set-Cookie');
-            // console.log(cookie);
+            // const cookie = response.headers.get('Set-Cookie');
             const jsonResponse = JSON.parse(responseData);
             console.log('success !!!');
             
-            // setRole('role', jsonResponse.role);
-            // setRole('myToken', jsonResponse.token);
+            setId('id', jsonResponse.id);
+            setIsAdmin('is_admin', jsonResponse.is_admin);
             Swal.fire({
                 icon: 'success',
                 title: 'Login successful!',
                 showConfirmButton: false,
                 timer: 1500
             });
-            navigate('/');
+            navigate('/profile');
         } catch (error) {
             console.log('Error: ', error);
         }
@@ -101,6 +100,11 @@ const Login = () => {
                 Don't have an account? {" "}
                 <Link to="/sign-up"> Sign up here</Link>
             </p>
+
+            <p>
+                <Link className='forget-password' to="/forget-password">Forget Password ?</Link>
+            </p>
+
         </div>
     );
 };

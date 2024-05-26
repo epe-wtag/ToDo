@@ -51,6 +51,23 @@
     color: #268551;
   }
 
+  .forget-password {
+    text-decoration: none!important;
+    padding: 5px;
+    border: 2px solid #d1ecdd;
+    border-radius: 15%;
+    background-color: #f7fffa;
+    margin-top: 10px;
+  }
+
+  .forget-password:hover {
+    text-decoration: none!important;
+    padding: 5px;
+    border-radius: 15%;
+    background-color: #6fcf97;
+    color: white!important;
+  }
+
   @keyframes movememt {
     0% {
         transform: translateX(0);
