@@ -1,0 +1,60 @@
+.landing {
+    text-align: center;
+    margin-top: 200px;
+  }
+  
+  .landing h1 {
+    font-size: 112.5px;
+    color: #7A8DFD;
+  }
+  
+  .landing p {
+    font-size: 1.2rem;
+    color: #888;
+    margin-bottom: 20px;
+  }
+
+  .button-container {
+    position: relative;
+  }
+  
+  .login_button {
+    background-color: #7A8DFD;
+    color: white;
+    padding: 15px 35px;
+    font-size: 20px;
+    font-weight: bold;
+    border: none;
+    border-radius: 15%;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+  }
+
+  .logo-div {
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+  }
+  
+  .login_button:hover {
+    padding: 15px 100px;
+    color: white;
+    font-weight:initial;
+  }
+  
+  .emoji {
+    position: absolute;
+    top: -23px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 25px; 
+  }
+  
+  
+.logo-imageClass {
+  margin-bottom: 0;
+  margin-top: 70px;
+  margin-left: 10px;
+  margin-right: 10px;
+}

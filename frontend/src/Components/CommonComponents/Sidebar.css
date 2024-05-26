@@ -1,0 +1,137 @@
+.sidebar {
+    width: 6%;
+    height: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    background-color: #4f5b9c;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    transition: 0.5s;
+    z-index: 1000;
+}
+
+.logo-small {
+    height: 50px;
+    width: 150px;
+    position: relative;
+    top: 0;
+    background-color: #7A8DFD;
+    border-radius: 0% 0% 0% 99%;
+    border: 1px solid white;
+}
+
+p p a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 10px;
+}
+
+
+.logo-cover-small {
+    display: none;
+    height: 68px;
+    width: 149px;
+    position: sticky;
+    padding: 0;
+    background-color: #7A8DFD;
+    border: 1px solid white;
+}
+
+.logo-cover-small.open {
+    display: flex;
+}
+
+.sidebar.open {
+    width: 190px;
+}
+
+.menu.open {
+    display: inline;
+}
+
+.toggle-btn-menu {
+    display: flex;
+    flex-direction: column;
+    margin: 0%;
+    cursor: pointer;
+    background-color: transparent;
+    justify-content: center;
+    align-items: center;
+}
+
+
+
+.toggle-btn-menu span {
+    margin-top: 15px;
+    font-size: 24px;
+    color: #f5f1f1;
+}
+
+.arrow-icon {
+    margin-left: 5px;
+    font-size: 20px;
+}
+
+.sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar nav ul li {
+    margin-top: 30px;
+    padding-right: 10px;
+    margin-right: 10px;
+    margin-left: 0;
+    padding-left: 10px;
+}
+
+.sidebar nav ul li a {
+    display: block;
+    padding: 10px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 1px;
+}
+
+.sidebar nav ul li:hover {
+    background-color: #434861;
+    opacity: 1;
+    border-radius: 1%;
+}
+
+.hr {
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
+.menu-link {
+    display: flex;
+    flex-direction: row;
+}
+
+.menu {
+    padding-left: 10px;
+    display: none;
+}
+
+.auth_btn {
+    padding-top: 100px;
+    padding-bottom: 10px;
+}
+
+@media screen and (max-width: 750px) {
+    .toggle-btn-menu span {
+        display: none;
+    }
+
+    .arrow-icon {
+        display: inline;
+    }
+
+    .sidebar.open .arrow-icon {
+        transform: rotate(180deg);
+    }
+}

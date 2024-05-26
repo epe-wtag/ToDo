@@ -1,0 +1,259 @@
+.profile-container {
+  max-width: 700px;
+  margin: auto;
+  padding: 30px;
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 70px;
+}
+
+.profile-avatar {
+  width: 250px;
+  height: 250px;
+  border-radius: 30% 50%;
+  overflow: hidden;
+  margin-right: 20px;
+  box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+}
+
+.profile-avatar-side {
+  display: flex;
+  flex-direction: column;
+}
+
+.button-container {
+  margin-top: 10%;
+}
+
+.password-button {
+  background-color: #7A8DFD;
+  color: white;
+  padding-left: 30px;
+  padding-right: 30px;
+  padding-top: 20px;
+  padding-bottom: 10px;
+  font-size: 20px;
+  border: none;
+  border-radius: 40% 40% 5% 5%;
+  text-decoration: none;
+  display: inline-block;
+  transition: background-color 0.3s ease;
+}
+
+.password-button:hover {
+  background-color: #232c63;
+}
+
+.emoji {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 35px;
+}
+
+.header-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding-top: 50px;
+}
+
+.edit-icon-link {
+  text-decoration: none!important;
+  height: 30px;
+  width: 30px;
+
+}
+
+.edit-icon {
+  font-size: 20px;
+
+}
+
+.edit-icon:hover {
+  font-size: 25px;
+
+}
+
+
+.h2-text {
+  padding-right: 20px;
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-info {
+  flex: 1;
+  padding-left: 15%;
+}
+
+.profile-info p {
+  margin: 30px 0;
+  font-size: 16px;
+}
+
+.profile-info p strong {
+  font-weight: bold;
+  color: #5e5959;
+  float: left;
+}
+
+.profile-info p span {
+  color: #666;
+  text-align: right !important;
+
+}
+
+.modal {
+  display: block;
+  position: fixed; 
+  z-index: 1000; 
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.562); 
+  color: white;
+}
+
+.modal-content {
+  background-color: rgb(123, 139, 153);
+  width: 50%; 
+  max-width: 500px; 
+  margin: 10% auto; 
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.close {
+  float: right;
+  font-size: 30px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #252f69;
+}
+
+.edit-profile-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-profile-form input {
+  margin-bottom: 15px;
+  margin-top: 5px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  float: right;
+  width: 60%;
+}
+
+.edit-profile-form label {
+  margin-bottom: 15px;
+  margin-top: 5px;
+  padding: 10px;
+  float: left;
+}
+
+.edit-profile-form button {
+  padding: 10px;
+  background-color: #545661;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.edit-profile-form button:hover {
+  background-color: #454855;
+}
+
+
+@media screen and (max-width: 750px) {
+
+  .profile-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 10px;
+  }
+
+  .profile-info {
+    align-items: center;
+    justify-content: center;
+    padding-left: 0%;
+  }
+
+  .profile-avatar {
+    width: 200px;
+    height: 200px;
+    border-radius: 30% 50%;
+    overflow: hidden;
+    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+    margin-bottom: 30px;
+    margin-top: 30px;
+  }
+
+  .profile-info p {
+    font-size: 16px;
+  }
+
+  .h2-text {
+    margin-top: 0;
+    padding-right: 0;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #7A8DFD;
+  }
+
+  .header-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-top: auto;
+  }
+
+  .profile-container {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .profile-avatar-side {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .edit-icon {
+    font-size: 20px;
+    border: 1px solid #8fa0a0;
+    padding: 5px;
+    border-radius: 50% 30%;
+    box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.2);
+  
+  }
+  
+  .edit-icon:hover {
+    font-size: 25px;
+  
+  }
+  
+
+
+
+}

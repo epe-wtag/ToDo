@@ -1,0 +1,153 @@
+.cards-container-home {
+    margin-bottom: 20%;
+    margin-top: 80px!important;
+    overflow-x: hidden!important;
+    width: 70%!important;
+    background-color: #F8F9FF!important;
+    
+}
+
+.pagination-controls {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    padding-left: 10px;
+    bottom: 30px;
+    width: 80%;
+    overflow-x: hidden;
+    background-color: #deececb6;
+    margin-left: 12%;
+    border-radius: 35px;
+}
+
+.pagination-controls button {
+    background-color: #7A8DFD;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 30%;
+}
+
+.pagination-controls button:disabled {
+    background-color: #888282;
+    cursor: not-allowed;
+}
+
+.pagination-controls span {
+    font-size: 16px;
+    color: #333;
+}
+
+
+.search-bar {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    margin-left: 30px;
+    width: 100%;
+}
+
+.search-bar form {
+    display: flex;
+    align-items: center;
+    width: 80%;
+    margin: 20px 0px 20px;
+}
+
+.search-bar input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-right: 10px;
+    font-size: 16px;
+    width: 75%;
+}
+
+.search-bar button {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 20%;
+    margin-top: 0;
+}
+
+.search-bar button[type="submit"] {
+    background-color: #7A8DFD;
+}
+
+.search-bar button[type="submit"]:hover,
+.search-bar button[type="button"]:hover {
+    background-color: #1d2655;
+}
+
+
+.filter-bar {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 0px 0px 0px;
+    padding-left: 30px;
+    bottom: 30px;
+    width: 70%;
+    overflow-x: hidden!important;
+    margin-left: 12%;
+    margin-top: 30px;
+    border-radius: 35px;
+}
+
+.filter-form {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    width: 80%;
+    
+}
+.filter-bar button {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 20%;
+    margin-top: 0;
+    margin-left: 3%;
+    overflow-x: hidden;
+    background-color: #7A8DFD;
+}
+
+.filter-bar button:hover {
+    background-color: #1f285c;
+}
+
+.filter-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    text-align: right;
+    margin-top: 5px;
+}
+.filter-select {
+    width: 60%;
+    padding: 8px;
+    margin-left: 8px;
+    margin-right: 3%;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
