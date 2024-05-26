@@ -17,7 +17,6 @@ load_dotenv()
 app = FastAPI()
 
 
-
 app.add_middleware(cors_middleware)
 
 
