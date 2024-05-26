@@ -57,7 +57,6 @@ const Login = () => {
         try {
             const response = await fetch('/api/v1/auth/login/', requestOption);
             const responseData = await response.text();
-            // const cookie = response.headers.get('Set-Cookie');
             const jsonResponse = JSON.parse(responseData);
             console.log('success !!!');
             
@@ -69,7 +68,7 @@ const Login = () => {
                 showConfirmButton: false,
                 timer: 1500
             });
-            navigate('/profile');
+            navigate('/home');
         } catch (error) {
             console.log('Error: ', error);
         }

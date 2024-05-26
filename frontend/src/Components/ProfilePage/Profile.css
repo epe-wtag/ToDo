@@ -30,7 +30,7 @@
 }
 
 .password-button {
-  background-color: #1e4b4b;
+  background-color: #7A8DFD;
   color: white;
   padding-left: 30px;
   padding-right: 30px;
@@ -45,7 +45,7 @@
 }
 
 .password-button:hover {
-  background-color: #295757;
+  background-color: #232c63;
 }
 
 .emoji {
@@ -127,7 +127,7 @@
 }
 
 .modal-content {
-  background-color: rgb(174, 209, 194);
+  background-color: rgb(123, 139, 153);
   width: 50%; 
   max-width: 500px; 
   margin: 10% auto; 
@@ -144,7 +144,7 @@
 }
 
 .close:hover {
-  color: #295757;
+  color: #252f69;
 }
 
 .edit-profile-form {
@@ -171,7 +171,7 @@
 
 .edit-profile-form button {
   padding: 10px;
-  background-color: #1e4b4b;
+  background-color: #545661;
   color: white;
   border: none;
   border-radius: 5px;
@@ -179,8 +179,7 @@
 }
 
 .edit-profile-form button:hover {
-  background-color: #295757;
-  font-size: 14px;
+  background-color: #454855;
 }
 
 
@@ -217,7 +216,7 @@
     margin-top: 0;
     padding-right: 0;
     padding-bottom: 20px;
-    border-bottom: 1px solid #1e4b4b;
+    border-bottom: 1px solid #7A8DFD;
   }
 
   .header-container {

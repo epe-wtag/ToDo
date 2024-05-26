@@ -1,26 +1,76 @@
 .sidebar {
-    background-color: #486969;
-    color: #fff;
-    width: 200px;
-    height: 96vh;
-    position: sticky;
+    width: 6%;
+    height: 100%;
+    position: fixed;
     top: 0;
     left: 0;
-    padding: 20px;
-    margin-top: 0px;
-    margin-left: 0;
-    float: left;
+    background-color: #4f5b9c;
+    overflow-x: hidden;
     overflow-y: hidden;
+    transition: 0.5s;
+    z-index: 1000;
 }
 
-.icon {
-    margin-right: 10px;
-    font-size: 20px;
+.logo-small {
+    height: 50px;
+    width: 150px;
+    position: relative;
+    top: 0;
+    background-color: #7A8DFD;
+    border-radius: 0% 0% 0% 99%;
+    border: 1px solid white;
+}
+
+p p a {
+    color: #fff;
+    text-decoration: none;
+    font-size: 10px;
+}
+
+
+.logo-cover-small {
+    display: none;
+    height: 68px;
+    width: 149px;
+    position: sticky;
+    padding: 0;
+    background-color: #7A8DFD;
+    border: 1px solid white;
+}
+
+.logo-cover-small.open {
+    display: flex;
+}
+
+.sidebar.open {
+    width: 190px;
+}
+
+.menu.open {
+    display: inline;
+}
+
+.toggle-btn-menu {
+    display: flex;
+    flex-direction: column;
+    margin: 0%;
+    cursor: pointer;
+    background-color: transparent;
+    justify-content: center;
+    align-items: center;
+}
+
+
+
+.toggle-btn-menu span {
+    margin-top: 15px;
+    font-size: 24px;
+    color: #f5f1f1;
 }
 
 .arrow-icon {
-    margin-left: 30px;
-    font-size: 16px;
+    margin-left: 5px;
+    font-size: 20px;
 }
 
 .sidebar nav ul {
@@ -30,165 +80,58 @@
 }
 
 .sidebar nav ul li {
-    margin-bottom: 10%;
-    margin-top: 10%;
-    padding: 10%;
+    margin-top: 30px;
+    padding-right: 10px;
+    margin-right: 10px;
+    margin-left: 0;
+    padding-left: 10px;
 }
 
 .sidebar nav ul li a {
+    display: block;
+    padding: 10px;
     color: #fff;
     text-decoration: none;
     font-size: 16px;
+    border-radius: 1px;
 }
 
 .sidebar nav ul li:hover {
-    background-color: #1e4b4b;
+    background-color: #434861;
     opacity: 1;
-    border-radius: 0%;
+    border-radius: 1%;
+}
+
+.hr {
+    margin-right: 10px;
+    margin-left: 10px;
+}
+
+.menu-link {
+    display: flex;
+    flex-direction: row;
+}
+
+.menu {
+    padding-left: 10px;
+    display: none;
 }
 
 .auth_btn {
     padding-top: 100px;
     padding-bottom: 10px;
-
-}
-
-.sidebar nav ul p p a {
-    color: #fff;
-    text-decoration: none;
-    font-size: 16px;
-}
-
-.logo {
-    height: 80px;
-    width: 200px;
-    position: relative;
-    top: 0;
-    background-color: #1e4b4b;
-    border-radius: 0% 0% 0% 99%;
-    border: 1px solid white;
-}
-.logo-cover {
-    height: 110px;
-    width: 201px;
-    position: sticky;
-    padding: 0;
-    background-color: #1e4b4b;
-    /* border-radius: 99% 0% 0% 0%; */
-    border: 1px solid white;
-}
-
-.toggle-btn {
-    display: none;
-    background-color: transparent;
-    border: none;
-    color: #fff;
-    font-size: 16px;
-    cursor: pointer;
-    margin-bottom: 10px; /* Adjust spacing as needed */
-}
-
-.toggle-btn:focus {
-    outline: none; /* Remove focus outline */
-}
-
-
-
-
-
-@media screen and (max-width: 700px) {
-    .sidebar  {
-        width: 150px;
-        height: 96vh;
-    }
-    .logo-cover {
-        width: 150px;
-    }
-    .logo {
-        width: 150px;
-    }
-    .auth_btn {
-        padding-top: 10px;
-        padding-bottom: 10px;
-    
-    }
 }
 
 @media screen and (max-width: 750px) {
-    .toggle-btn {
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        margin: auto;
-
-    }
-
-    .logo-small {
-        height: 40px;
-        width: 150px;
-        position: relative;
-        top: 0;
-        background-color: #1e4b4b;
-        border-radius: 0% 0% 0% 99%;
-        border: 1px solid white;
-    }
-    .logo-cover-small {
-        height: 70px;
-        width: 151px;
-        position: sticky;
-        padding: 0;
-        background-color: #1e4b4b;
-        border: 1px solid white;
-    }
-
-    p p a {
-        color: #fff;
-        text-decoration: none;
-        font-size: 10px;
-    }
-
-    .logo-cover {
+    .toggle-btn-menu span {
         display: none;
     }
 
-
-    .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
-        padding: 20px 0;
-        overflow-y: visible;
+    .arrow-icon {
+        display: inline;
     }
 
-    .sidebar nav ul {
-        display: none; 
-    }
-
-    .sidebar nav ul li {
-        margin: 10px 0;
-        padding: 0;
-    }
-
-    .sidebar nav ul li a {
-        display: block;
-        padding: 10px;
-        font-size: 16px;
-    }
-
-    .sidebar nav ul p p a {
-        display: block;
-        padding: 10px;
-        font-size: 16px;
-    }
-
-    .sidebar nav ul li:hover {
-        background-color: transparent; 
-    }
-
-    
-    .sidebar.open nav ul {
-        display: block;
+    .sidebar.open .arrow-icon {
+        transform: rotate(180deg);
     }
 }

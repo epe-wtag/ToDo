@@ -5,17 +5,19 @@ services:
     build:
       context: .
     ports:
-      - 8000:8000
+      - "8000:8000"
     depends_on:
       - database
     restart: on-failure
     environment:
       - DB_URL=true
+    volumes:
+      - ./logs:/logs
 
   database:
     image: postgres
     ports:
-      - 5435:5432
+      - "5435:5432"
     environment:
       - POSTGRES_DB=todo
       - POSTGRES_USER=postgres
