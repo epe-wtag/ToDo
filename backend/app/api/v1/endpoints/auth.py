@@ -6,18 +6,24 @@ from sqlalchemy import select
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependency import admin_check
+from app.core.dependency import (
+    check_authorization,
+    check_existing_email,
+    check_existing_username,
+    check_user_permission,
+)
 from app.core.security import (
     create_access_token,
     generate_reset_token,
-    generate_verification_token,
     get_current_user,
     get_current_user_role,
+    hash_password,
     send_reset_email,
-    simple_send,
     verify_reset_token,
     verify_token,
 )
+from app.core.service import send_verification_email
+from app.db.crud import create_in_db, fetch_data_by_id, update_instance
 from app.db.database import get_db
 from app.model.base_model import User
 from app.schema.auth_schema import UserInResponse
@@ -47,24 +53,10 @@ async def create_user(
 ):
     log.info(f"Attempting to create user: {username}, email: {email}")
     try:
-        existing_username = await db.execute(
-            select(User).where(User.username == username)
-        )
-        if existing_username.scalar():
-            log.warning(f"Username {username} already exists")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Username already exists",
-            )
+        await check_existing_username(db, username)
+        await check_existing_email(db, email)
 
-        existing_email = await db.execute(select(User).where(User.email == email))
-        if existing_email.scalar():
-            log.warning(f"Email {email} already exists")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Email already exists"
-            )
-
-        hashed_password = await async_hash_password(password)
+        hashed_password = await hash_password(password)
 
         user_data = {
             "username": username,
@@ -76,13 +68,9 @@ async def create_user(
             "contact_number": contact_number,
             "gender": gender,
         }
-        user = User(**user_data)
 
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        verification_token = generate_verification_token(email)
-        await simple_send(email, verification_token)
+        user = await create_in_db(db, User, user_data)
+        await send_verification_email(email)
         log.info(f"User {username} created successfully with email {email}")
         return user
 
@@ -130,19 +118,15 @@ async def get_user(
     user_id: int = Depends(get_current_user),
     admin: str = Depends(get_current_user_role),
 ):
-    log.info(f"Fetching user with id: {id}")
     try:
-        user = await db.get(User, id)
-        if not user:
-            log.warning(f"User with id {id} does not exist")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with id: {id} does not exist",
-            )
-
-        if int(user_id) == user.id or admin_check(admin):
+        user = await fetch_data_by_id(db, User, id)
+        permission = await check_user_permission(user_id, admin, id)
+        if permission:
             log.success(f"User with id {id} fetched successfully")
             return user
+
+    except HTTPException:
+        raise
 
     except Exception as e:
         log.error(f"Failed to get user: {e}")
@@ -159,16 +143,16 @@ async def get_user(
 )
 async def update_user(
     id: int,
-    username: str = Form(...),
-    first_name: str = Form(...),
-    last_name: str = Form(...),
-    contact_number: str = Form(...),
+    username: str = Form(None),
+    first_name: str = Form(None),
+    last_name: str = Form(None),
+    contact_number: str = Form(None),
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user),
 ):
     log.info(f"Attempting to update user with id: {id}")
     try:
-        user = await db.get(User, id)
+        user = await fetch_data_by_id(db, User, id)
         if not user:
             log.warning(f"User with id {id} does not exist")
             raise HTTPException(
@@ -176,37 +160,32 @@ async def update_user(
                 detail=f"User with id: {id} does not exist",
             )
 
-        if int(user.id) == int(user_id):
-            if username is not None and username != user.username:
-                existing_username = await db.execute(
-                    select(User).where(User.username == username).where(User.id != id)
-                )
-                if existing_username.scalar():
-                    log.warning(f"Username {username} already exists")
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Username already exists",
-                    )
-                user.username = username
+        await check_authorization(user_id, user)
 
-            if first_name is not None:
-                user.first_name = first_name
-
-            if last_name is not None:
-                user.last_name = last_name
-
-            if contact_number is not None:
-                user.contact_number = contact_number
-
-            await db.commit()
-            log.success(f"User with id {id} updated successfully")
-            return user
-        else:
-            log.warning(f"Unauthorized attempt to update user with id {id}")
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"User with id: {id} does not exist",
+        if username is not None and username != user.username:
+            existing_username = await db.execute(
+                select(User).where(User.username == username).where(User.id != id)
             )
+            if existing_username.scalar():
+                log.warning(f"Username {username} already exists")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username already exists",
+                )
+            user.username = username
+
+        if first_name is not None:
+            user.first_name = first_name
+
+        if last_name is not None:
+            user.last_name = last_name
+
+        if contact_number is not None:
+            user.contact_number = contact_number
+
+        await update_instance(db, user)
+        log.success(f"User with id {id} updated successfully")
+        return user
 
     except Exception as e:
         log.error(f"Failed to update user: {e}")

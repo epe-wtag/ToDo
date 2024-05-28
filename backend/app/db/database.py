@@ -14,7 +14,7 @@ DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_URL = os.environ.get("DB_URL")
 
-DB_TEST_URL = "sqlite+aiosqlite:///./test.db"
+
 
 
 if DB_URL:
@@ -32,18 +32,11 @@ engine = create_async_engine(
     pool_size=20,
 )
 
-testing_engine = create_async_engine(
-    DB_TEST_URL,
-    echo=False,
-    future=True,
-)
 
 SessionLocal = sessionmaker(
     bind=engine, class_=AsyncSession, expire_on_commit=False, autocommit=False
 )
-TestingSessionLocal = sessionmaker(
-    bind=testing_engine, class_=AsyncSession, expire_on_commit=False, autocommit=False
-)
+
 
 
 Base = declarative_base()
@@ -54,9 +47,6 @@ async def create_all_tables():
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def create_testing_tables():
-    async with testing_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
 
 
 async def get_db():
@@ -67,9 +57,6 @@ async def get_db():
             await db.close()
 
 
-async def get_testing_db():
-    async with TestingSessionLocal() as db:
-        try:
-            yield db
-        finally:
-            await db.close()
+
+
+

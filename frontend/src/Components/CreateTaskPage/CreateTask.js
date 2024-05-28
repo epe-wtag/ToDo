@@ -3,8 +3,10 @@ import './CreateTask.css';
 import Sidebar from '../CommonComponents/Sidebar';
 import { useNavigate } from 'react-router-dom'; 
 import Swal from 'sweetalert2';
+import useAuthRedirect from '../CommonComponents/Hooks';
 
 const CreateTask = () => {
+    useAuthRedirect();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [dueDate, setDueDate] = useState('');

@@ -1,5 +1,7 @@
 import os
 from datetime import datetime, timedelta
+from typing import Optional
+from fastapi import Response
 
 from dotenv import load_dotenv
 from fastapi import Cookie, Depends, FastAPI, HTTPException, status
@@ -10,6 +12,9 @@ from pydantic import EmailStr
 from starlette.responses import JSONResponse
 
 from app.schema.auth_schema import TokenData
+from fastapi.responses import RedirectResponse
+
+from app.util.hash import async_hash_password
 
 load_dotenv()
 
@@ -40,6 +45,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 300
 TOKEN_EXPIRE_MINUTES = 30
 
 
+async def hash_password(password: str) -> str:
+    return await async_hash_password(password)
+
+
 def create_access_token(data: dict, secret_key: str = SECRET_KEY) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {**data, "exp": expire}
@@ -54,8 +63,20 @@ def generate_verification_token(email: str) -> str:
 
 
 def get_token_data(
-    token: str = Cookie("token", secure=True, httponly=True),
+    token: Optional[str] = Cookie("token", secure=True, httponly=True),
+    response: Response = None
 ) -> TokenData:
+    if not token or token == 'token' or token is None:
+        if response is not None:
+            response.delete_cookie('id')
+            response.delete_cookie('is_admin')
+            response.headers.update({"WWW-Authenticate": "Bearer"})
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token is missing",
+                headers=response.headers,
+            )
+
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return TokenData(id=str(payload.get("user_id")), role=str(payload.get("role")))
@@ -100,34 +121,6 @@ async def send_reset_email(email: EmailStr, token: str) -> JSONResponse:
         body=html,
         subtype=MessageType.html,
     )
-    fm = FastMail(conf)
-    await fm.send_message(message)
-    return JSONResponse(status_code=200, content={"message": "email has been sent"})
-
-
-async def simple_send(email: EmailStr, token: str) -> JSONResponse:
-    verify_url = "http://127.0.0.1:8000/api/v1/auth/verify"
-    button_html = f"""
-    <form method="post" action="{verify_url}">
-        <input type="hidden" name="email" value="{email}">
-        <input type="hidden" name="v_token" value="{token}">
-        <button type="submit" style="background-color: #008CBA; border: none; color: white; padding: 15px 32px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer;">Verify Email</button>
-    </form>
-    """
-
-    html = f"""
-    <h3>This Token will be valid for 30 minutes only.</h3> 
-    <br>
-    <p>Click to Verify: {button_html}</p>
-    """
-
-    message = MessageSchema(
-        subject="Verification Mail",
-        recipients=[email],
-        body=html,
-        subtype=MessageType.html,
-    )
-
     fm = FastMail(conf)
     await fm.send_message(message)
     return JSONResponse(status_code=200, content={"message": "email has been sent"})
