@@ -1,21 +1,16 @@
-import os
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from pydantic import EmailStr
+
+from app.core.config import MAIL_FROM, MAIL_PASSWORD, MAIL_USERNAME
 from app.core.security import generate_verification_token
 
-
-
-load_dotenv()
-
-
 conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("EMAIL"),
-    MAIL_PASSWORD=os.getenv("PASS"),
-    MAIL_FROM=os.getenv("EMAIL"),
+    MAIL_USERNAME=MAIL_USERNAME,
+    MAIL_PASSWORD=MAIL_PASSWORD,
+    MAIL_FROM=MAIL_FROM,
     MAIL_PORT=587,
     MAIL_SERVER="smtp.gmail.com",
     MAIL_STARTTLS=True,
@@ -30,13 +25,10 @@ app = FastAPI()
 
 bearer_scheme = HTTPBearer()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-VERIFICATION_KEY = os.getenv("VERIFICATION_KEY")
-RESET_PASSWORD_KEY = os.getenv("RESET_PASSWORD_KEY")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 300
 TOKEN_EXPIRE_MINUTES = 30
-
 
 
 async def simple_send(email: EmailStr, token: str) -> JSONResponse:

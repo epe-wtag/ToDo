@@ -25,7 +25,12 @@ from app.core.security import (
     verify_token,
 )
 from app.core.service import send_verification_email
-from app.db.crud import create_in_db, fetch_data_by_id, update_instance, update_instance_fields
+from app.db.crud import (
+    create_in_db,
+    fetch_data_by_id,
+    update_instance,
+    update_instance_fields,
+)
 from app.db.database import get_db
 from app.model.base_model import User
 from app.schema.auth_schema import UserInResponse
@@ -37,51 +42,26 @@ router = APIRouter(prefix="/auth", tags=["Authentication:"])
 templates = Jinja2Templates(directory="app/templates")
 
 
-@router.post(
-    "/create-user",
-    status_code=status.HTTP_201_CREATED,
-    response_model=UserInResponse,
-)
-async def create_user(
-    username: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    role: str = Form(...),
-    first_name: str = Form(...),
-    last_name: str = Form(...),
-    contact_number: str = Form(...),
-    gender: str = Form(...),
-    db: AsyncSession = Depends(get_db),
-):
-    log.info(f"Attempting to create user: {username}, email: {email}")
-    try:
-        await check_existing_username(db, username)
-        await check_existing_email(db, email)
+def test_create_user(test_client):
+    print("Executing test_create_user")
+    data = {
+        "username": "test_user",
+        "email": "test@example.com",
+        "password": "password123",
+        "role": "user",
+        "first_name": "Test",
+        "last_name": "User",
+        "contact_number": "1234567890",
+        "gender": "male"
+    }
+    response = test_client.post("/api/v1/auth/create-user", data=data)
+    print(f"Response status code: {response.status_code}")
+    print(f"Response content: {response.content}")
+    assert response.status_code == 201
+    response_json = response.json()
+    assert "id" in response_json
+    assert response_json["email"] == "test@example.com"
 
-        hashed_password = await hash_password(password)
-
-        user_data = {
-            "username": username,
-            "email": email,
-            "password": hashed_password,
-            "role": role,
-            "first_name": first_name,
-            "last_name": last_name,
-            "contact_number": contact_number,
-            "gender": gender,
-        }
-
-        user = await create_in_db(db, User, user_data)
-        await send_verification_email(email)
-        log.info(f"User {username} created successfully with email {email}")
-        return user
-
-    except Exception as e:
-        log.error(f"Failed to create user: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create user: {str(e)}",
-        )
 
 
 @router.post("/verify")
@@ -348,9 +328,9 @@ async def change_password(
         await check_user_active(user)
 
         hashed_password = await async_hash_password(new_password)
-        await update_instance_fields(user, {'password': hashed_password})
+        await update_instance_fields(user, {"password": hashed_password})
         await update_instance(db, user)
-        
+
         response.delete_cookie("token")
         log.info(f"Password changed successfully for user_id: {user_id}")
         return {"message": "Password changed successfully"}

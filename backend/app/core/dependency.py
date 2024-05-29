@@ -1,5 +1,6 @@
 from enum import Enum
 from typing import Type
+
 from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,9 +96,7 @@ def validate_and_convert_enum_value(value: str, enum_type: Type[Enum]) -> Enum:
     return enum_type(value)
 
 
-async def check_authorization_only_admin(
-    instance: Base, user_role: str
-) -> None:
+async def check_authorization_only_admin(instance: Base, user_role: str) -> None:
     if not admin_check(user_role):
         log.warning(
             f"Unauthorized update attempt for instance id {instance.id} by this user"
@@ -106,7 +105,8 @@ async def check_authorization_only_admin(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You are not allowed to update this resource",
         )
-        
+
+
 async def check_user_active(user: User) -> None:
     if not user.is_active:
         log.warning(f"Inactive user attempted password change for user_id: {user.id}")

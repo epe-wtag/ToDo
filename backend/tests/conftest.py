@@ -1,27 +1,20 @@
-import asyncio
-import os
 from unittest.mock import patch
-
 import pytest
-from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.core.security import create_access_token
 from app.model.base_model import Base
 from app.db.database import get_db
 from main import app
+import logging
+import os
 
-load_dotenv()
 
-DB_DATABASE = os.getenv("DB_DATABASE")
-
-DB_TEST_URL = "sqlite+aiosqlite:///./test.db"
+DB_TEST_URL = "sqlite+aiosqlite:///:memory:"
 
 testing_engine = create_async_engine(
     DB_TEST_URL,
-    echo=False,
+    echo=True,  
     future=True,
 )
 
@@ -31,18 +24,18 @@ TestingSessionLocal = sessionmaker(
 
 @pytest.fixture(scope="session", autouse=True)
 async def test_db():
+    logging.info("Setting up the test database")
     async with testing_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with testing_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    logging.info("Tearing down the test database")
 
 @pytest.fixture
 async def db_session(test_db):
     async with TestingSessionLocal() as session:
         yield session
-        
-        
 
 @pytest.fixture
 def test_client(db_session):
@@ -53,8 +46,6 @@ def test_client(db_session):
     app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as client:
         yield client
-        
-        
 
 @pytest.fixture
 def mock_jwt_decode():
@@ -68,8 +59,12 @@ def mock_create_access_token():
         mock.return_value = "mocked_access_token"
         yield
 
-
 @pytest.fixture
 def mock_get_current_user():
     with patch("app.core.security.get_current_user") as mock:
         yield mock
+
+@pytest.fixture
+def mock_send_email():
+    with patch("app.api.v1.endpoints.auth.send_email_function") as mock_send_email:
+        yield mock_send_email
