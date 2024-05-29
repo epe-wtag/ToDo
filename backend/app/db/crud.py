@@ -63,7 +63,9 @@ async def delete_instance(db: AsyncSession, instance: Base) -> None:
     try:
         await db.delete(instance)
         await db.commit()
-        log.info(f"{instance.__class__.__name__} with id {instance.id} deleted successfully")
+        log.info(
+            f"{instance.__class__.__name__} with id {instance.id} deleted successfully"
+        )
     except Exception as e:
         log.error(f"Failed to delete {instance.__class__.__name__}: {e}")
         raise HTTPException(

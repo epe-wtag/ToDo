@@ -1,30 +1,30 @@
-import os
 from datetime import datetime, timedelta
 from typing import Optional
-from fastapi import Response
 
-from dotenv import load_dotenv
-from fastapi import Cookie, Depends, FastAPI, HTTPException, status
+from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
 from fastapi.security import HTTPBearer
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from jose import jwt
 from pydantic import EmailStr
 from starlette.responses import JSONResponse
 
+from app.core.config import (
+    MAIL_FROM,
+    MAIL_PASSWORD,
+    MAIL_USERNAME,
+    RESET_PASSWORD_KEY,
+    SECRET_KEY,
+    VERIFICATION_KEY,
+)
 from app.model.base_model import User
 from app.schema.auth_schema import TokenData
-from fastapi.responses import RedirectResponse
+from app.util.hash import async_hash_password, verify_password
 from logger import log
 
-from app.util.hash import async_hash_password, verify_password
-
-load_dotenv()
-
-
 conf = ConnectionConfig(
-    MAIL_USERNAME=os.getenv("EMAIL"),
-    MAIL_PASSWORD=os.getenv("PASS"),
-    MAIL_FROM=os.getenv("EMAIL"),
+    MAIL_USERNAME=MAIL_USERNAME,
+    MAIL_PASSWORD=MAIL_PASSWORD,
+    MAIL_FROM=MAIL_FROM,
     MAIL_PORT=587,
     MAIL_SERVER="smtp.gmail.com",
     MAIL_STARTTLS=True,
@@ -39,9 +39,7 @@ app = FastAPI()
 
 bearer_scheme = HTTPBearer()
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-VERIFICATION_KEY = os.getenv("VERIFICATION_KEY")
-RESET_PASSWORD_KEY = os.getenv("RESET_PASSWORD_KEY")
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 300
 TOKEN_EXPIRE_MINUTES = 30
@@ -74,12 +72,12 @@ async def verify_old_password(user: User, old_password: str) -> None:
 
 def get_token_data(
     token: Optional[str] = Cookie("token", secure=True, httponly=True),
-    response: Response = None
+    response: Response = None,
 ) -> TokenData:
-    if not token or token == 'token' or token is None:
+    if not token or token == "token" or token is None:
         if response is not None:
-            response.delete_cookie('id')
-            response.delete_cookie('is_admin')
+            response.delete_cookie("id")
+            response.delete_cookie("is_admin")
             response.headers.update({"WWW-Authenticate": "Bearer"})
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

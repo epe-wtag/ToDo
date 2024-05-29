@@ -1,20 +1,11 @@
 import os
 
-from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-load_dotenv()
+from app.core.config import DB_DATABASE, DB_HOST, DB_HOST_LOCAL, DB_PASSWORD, DB_USER
 
-
-DB_HOST = os.getenv("DB_HOST")
-DB_HOST_LOCAL = os.getenv("DB_HOST_local")
-DB_DATABASE = os.getenv("DB_DATABASE")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_URL = os.environ.get("DB_URL")
-
-
 
 
 if DB_URL:
@@ -38,7 +29,6 @@ SessionLocal = sessionmaker(
 )
 
 
-
 Base = declarative_base()
 
 
@@ -47,16 +37,9 @@ async def create_all_tables():
         await conn.run_sync(Base.metadata.create_all)
 
 
-
-
 async def get_db():
     async with SessionLocal() as db:
         try:
             yield db
         finally:
             await db.close()
-
-
-
-
-
