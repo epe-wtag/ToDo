@@ -5,11 +5,28 @@ from fastapi import APIRouter, Depends, Form, HTTPException, status
 from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependency import admin_check, admin_role_check
+from app.core.dependency import (
+    admin_check,
+    admin_role_check,
+    check_authorization,
+    check_authorization_if_forbiden,
+    check_authorization_only_admin,
+    validate_and_convert_enum_value,
+)
 from app.core.security import get_current_user, get_current_user_role
+from app.db.crud import (
+    create_in_db,
+    delete_instance,
+    fetch_data_by_id,
+    fetch_items,
+    update_instance,
+    update_instance_fields,
+)
 from app.db.database import get_db
+from app.db.db_operations import get_base_query
 from app.model.base_model import Category, Task, User
 from app.schema.task_schema import TaskCreate, TaskInDB, TaskList, TaskUpdate
+from sqlalchemy.exc import SQLAlchemyError
 from logger import log
 
 router = APIRouter(
@@ -32,13 +49,10 @@ async def create_task(
     category: str = Form(...),
     completed_at: str = Form(None),
     db: AsyncSession = Depends(get_db),
-    user: int = Depends(get_current_user),
+    user_id: int = Depends(get_current_user),
 ):
-    log.info(
-        f"Attempting to create task with title: {title}, description: {description}"
-    )
     try:
-        owner_id = user
+        owner_id = user_id
         task_data = TaskCreate(
             title=title,
             description=description,
@@ -48,10 +62,7 @@ async def create_task(
             completed_at=completed_at,
             owner_id=owner_id,
         )
-        db_task = Task(**task_data.dict())
-        db.add(db_task)
-        await db.commit()
-        await db.refresh(db_task)
+        db_task = await create_in_db(db, Task, task_data.dict())
         log.info(f"Task created successfully with id: {db_task.id}")
         return db_task
     except Exception as e:
@@ -74,29 +85,11 @@ async def read_tasks(
     log.info(f"Fetching tasks with query: {query}, skip: {skip}, limit: {limit}")
     try:
         admin = admin_role_check(user_role)
+        base_query = await get_base_query(Task, admin, user_id, query)
+        tasks, total = await fetch_items(db, base_query, Task, skip, limit)
 
-        base_query = select(Task)
-        if not admin:
-            base_query = base_query.filter(Task.owner_id == int(user_id))
-
-        if query:
-            base_query = base_query.where(
-                or_(
-                    Task.title.ilike(f"%{query}%"),
-                    Task.description.ilike(f"%{query}%"),
-                    cast(Task.due_date, String).ilike(f"%{query}%"),
-                )
-            )
-        total_query = select(func.count()).select_from(base_query.subquery())
-        total = await db.scalar(total_query)
-
-        paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
-
-        tasks = await db.execute(paginated_query)
-        task_list = tasks.scalars().all()
-
-        log.info(f"Fetched {len(task_list)} tasks")
-        return {"tasks": task_list, "total": int(total), "skip": skip, "limit": limit}
+        log.info(f"Fetched {len(tasks)} tasks")
+        return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
     except Exception as e:
         log.error(f"Failed to fetch tasks: {e}")
         raise HTTPException(
@@ -130,16 +123,10 @@ async def read_delete_request_tasks(
                     cast(Task.due_date, String).ilike(f"%{query}%"),
                 )
             )
-        total_query = select(func.count()).select_from(base_query.subquery())
-        total = await db.scalar(total_query)
+        tasks, total = await fetch_items(db, base_query, Task, skip, limit)
 
-        paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
-
-        tasks = await db.execute(paginated_query)
-        task_list = tasks.scalars().all()
-
-        log.info(f"Fetched {len(task_list)} tasks")
-        return {"tasks": task_list, "total": int(total), "skip": skip, "limit": limit}
+        log.info(f"Fetched {len(tasks)} tasks")
+        return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
     except Exception as e:
         log.error(f"Failed to fetch tasks: {e}")
         raise HTTPException(
@@ -160,29 +147,11 @@ async def search_tasks(
     log.info(f"Searching tasks with query: {query}, skip: {skip}, limit: {limit}")
     try:
         admin = admin_role_check(user_role)
+        base_query = await get_base_query(Task, admin, user_id, query)
+        tasks, total = await fetch_items(db, base_query, Task, skip, limit)
 
-        base_query = select(Task)
-        if not admin:
-            base_query = base_query.filter(Task.owner_id == int(user_id))
-
-        if query:
-            base_query = base_query.where(
-                or_(
-                    Task.title.ilike(f"%{query}%"),
-                    Task.description.ilike(f"%{query}%"),
-                    cast(Task.due_date, String).ilike(f"%{query}%"),
-                )
-            )
-        total_query = select(func.count()).select_from(base_query.subquery())
-        total = await db.scalar(total_query)
-
-        paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
-
-        tasks = await db.execute(paginated_query)
-        task_list = tasks.scalars().all()
-
-        log.info(f"Found {len(task_list)} tasks matching query: {query}")
-        return {"tasks": task_list, "total": int(total), "skip": skip, "limit": limit}
+        log.info(f"Fetched {len(tasks)} tasks")
+        return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
     except Exception as e:
         log.error(f"Failed to search tasks: {e}")
         raise HTTPException(
@@ -272,7 +241,7 @@ async def read_task(
         )
 
 
-@router.put("/tasks/{task_id}", response_model=TaskInDB)
+@router.put("/tasks/{task_id}", status_code=status.HTTP_200_OK, response_model=TaskInDB)
 async def update_task(
     task_id: int,
     owner_id: int = Form(...),
@@ -286,37 +255,36 @@ async def update_task(
 ):
     log.info(f"Updating task with id: {task_id}")
     try:
-        db_task = await db.execute(select(Task).filter(Task.id == task_id))
-        db_task = db_task.scalar()
+        db_task = await fetch_data_by_id(db, Task, task_id)
         if not db_task:
             log.warning(f"Task with id {task_id} not found")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
 
-        if int(current_user_id) != db_task.owner_id and not admin_check(user_role):
-            log.warning(
-                f"Unauthorized update attempt for task id {task_id} by user id {current_user_id}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not allowed to update this task",
-            )
+        await check_authorization_if_forbiden(current_user_id, db_task, user_role)
 
-        task_data = TaskUpdate(
-            title=title,
-            description=description,
-            due_date=due_date,
-            category=category,
-            owner_id=owner_id,
-        )
-        for key, value in task_data.dict().items():
-            setattr(db_task, key, value)
+        category_enum = validate_and_convert_enum_value(category, Category)
 
-        await db.commit()
-        await db.refresh(db_task)
+        task_data = {
+            "title": title,
+            "description": description,
+            "due_date": due_date,
+            "category": category_enum,
+            "owner_id": owner_id,
+        }
+
+        await update_instance_fields(db_task, task_data)
+        await update_instance(db, db_task)
+
         log.info(f"Task with id {task_id} updated successfully")
         return db_task
+    except SQLAlchemyError as e:
+        log.error(f"Database error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update task: {str(e)}",
+        )
     except Exception as e:
         log.error(f"Failed to update task: {e}")
         raise HTTPException(
@@ -335,27 +303,15 @@ async def update_task_status(
 ):
     log.info(f"Updating status of task with id: {task_id} to {status}")
     try:
-        db_task = await db.execute(select(Task).filter(Task.id == task_id))
-        db_task = db_task.scalar()
-        if not db_task:
-            log.warning(f"Task with id {task_id} not found")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-            )
+        db_task = await fetch_data_by_id(db, Task, task_id)
+        
+        await check_authorization_if_forbiden(current_user_id, db_task, user_role)
 
-        if int(current_user_id) != db_task.owner_id and not admin_check(user_role):
-            log.warning(
-                f"Unauthorized status update attempt for task id {task_id} by user id {current_user_id}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not allowed to update this task",
-            )
         db_task.status = status
-        await db.commit()
-        await db.refresh(db_task)
+        updated_task = await update_instance(db, db_task)
+        
         log.info(f"Status of task with id {task_id} updated successfully")
-        return db_task
+        return updated_task
     except Exception as e:
         log.error(f"Failed to update task status: {e}")
         raise HTTPException(
@@ -364,34 +320,22 @@ async def update_task_status(
         )
 
 
+
 @router.delete("/tasks/{task_id}")
 async def delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: int = Depends(get_current_user),
-    current_user_role: str = Depends(get_current_user_role),
+    current_user_id: int = Depends(get_current_user),
+    user_role: str = Depends(get_current_user_role),
 ):
     log.info(f"Deleting task with id: {task_id}")
     try:
-        db_task = await db.execute(select(Task).filter(Task.id == task_id))
-        db_task = db_task.scalar()
-        if not db_task:
-            log.warning(f"Task with id {task_id} not found")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-            )
-        if int(current_user) != db_task.owner_id and current_user_role != "admin":
-            log.warning(
-                f"Unauthorized delete attempt for task id {task_id} by user id {current_user}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to delete this task",
-            )
+        db_task = await fetch_data_by_id(db, Task, task_id)
+        
+        await check_authorization_only_admin(db_task, user_role)
 
-        await db.delete(db_task)
-        await db.commit()
-        log.info(f"Task with id {task_id} deleted successfully")
+        await delete_instance(db, db_task)
+        
         return {"message": "Task deleted successfully"}
     except Exception as e:
         log.error(f"Failed to delete task: {e}")
@@ -401,38 +345,27 @@ async def delete_task(
         )
 
 
+
 @router.put("/task-delete-request/{task_id}")
 async def request_delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: int = Depends(get_current_user),
-    current_user_role: str = Depends(get_current_user_role),
+    current_user_id: int = Depends(get_current_user),
+    user_role: str = Depends(get_current_user_role),
 ):
     log.info(f"Deleting task with id: {task_id}")
     try:
-        db_task = await db.execute(select(Task).filter(Task.id == task_id))
-        db_task = db_task.scalar()
-        if not db_task:
-            log.warning(f"Task with id {task_id} not found")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-            )
-        if int(current_user) != db_task.owner_id and current_user_role != "admin":
-            log.warning(
-                f"Unauthorized delete request attempt for task id {task_id} by user id {current_user}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to delete this task",
-            )
+        db_task = await fetch_data_by_id(db, Task, task_id)
+        
+        await check_authorization_if_forbiden(current_user_id, db_task, user_role)
 
         db_task.delete_request = True
-        await db.commit()
-        await db.refresh(db_task)
+        updated_task = await update_instance(db, db_task)
+        
         log.info(f"Task with id {task_id} delete requested successfully")
-        return {"message": "Task delete requested successfully"}
+        return updated_task
     except Exception as e:
-        log.error(f"Failed to delete task: {e}")
+        log.error(f"Failed to request delete task: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete task: {str(e)}",

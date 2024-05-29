@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Profile.css';
 import Sidebar from '../CommonComponents/Sidebar';
 import { Link } from 'react-router-dom';
+import useAuthRedirect from '../CommonComponents/Hooks';
 
 import { useCookies } from 'react-cookie';
 
@@ -10,6 +11,7 @@ import gif_img_male from '../../assets/images/male.gif';
 import Swal from 'sweetalert2';
 
 const Profile = () => {
+  useAuthRedirect();
 
 
 

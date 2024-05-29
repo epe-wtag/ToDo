@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react';
 import './Home.css';
 import Sidebar from '../CommonComponents/Sidebar';
 import Cards from '../CommonComponents/Cards';
+import useAuthRedirect from '../CommonComponents/Hooks';
 
 const Home = () => {
+    useAuthRedirect();
     const [cards, setAllCards] = useState([]);
     const [total, setTotal] = useState(9);
     const [pages, setPages] = useState(0);
