@@ -5,9 +5,23 @@ from fastapi import APIRouter, Depends, Form, HTTPException, status
 from sqlalchemy import String, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.dependency import admin_check, admin_role_check, check_authorization_if_forbiden, validate_and_convert_enum_value
+from app.core.dependency import (
+    admin_check,
+    admin_role_check,
+    check_authorization,
+    check_authorization_if_forbiden,
+    check_authorization_only_admin,
+    validate_and_convert_enum_value,
+)
 from app.core.security import get_current_user, get_current_user_role
-from app.db.crud import create_in_db, fetch_data_by_id, fetch_items, update_instance, update_instance_fields
+from app.db.crud import (
+    create_in_db,
+    delete_instance,
+    fetch_data_by_id,
+    fetch_items,
+    update_instance,
+    update_instance_fields,
+)
 from app.db.database import get_db
 from app.db.db_operations import get_base_query
 from app.model.base_model import Category, Task, User
@@ -227,7 +241,7 @@ async def read_task(
         )
 
 
-@router.put("/tasks/{task_id}", response_model=TaskInDB)
+@router.put("/tasks/{task_id}", status_code=status.HTTP_200_OK, response_model=TaskInDB)
 async def update_task(
     task_id: int,
     owner_id: int = Form(...),
@@ -249,7 +263,7 @@ async def update_task(
             )
 
         await check_authorization_if_forbiden(current_user_id, db_task, user_role)
-        
+
         category_enum = validate_and_convert_enum_value(category, Category)
 
         task_data = {
@@ -289,27 +303,15 @@ async def update_task_status(
 ):
     log.info(f"Updating status of task with id: {task_id} to {status}")
     try:
-        db_task = await db.execute(select(Task).filter(Task.id == task_id))
-        db_task = db_task.scalar()
-        if not db_task:
-            log.warning(f"Task with id {task_id} not found")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-            )
+        db_task = await fetch_data_by_id(db, Task, task_id)
+        
+        await check_authorization_if_forbiden(current_user_id, db_task, user_role)
 
-        if int(current_user_id) != db_task.owner_id and not admin_check(user_role):
-            log.warning(
-                f"Unauthorized status update attempt for task id {task_id} by user id {current_user_id}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You are not allowed to update this task",
-            )
         db_task.status = status
-        await db.commit()
-        await db.refresh(db_task)
+        updated_task = await update_instance(db, db_task)
+        
         log.info(f"Status of task with id {task_id} updated successfully")
-        return db_task
+        return updated_task
     except Exception as e:
         log.error(f"Failed to update task status: {e}")
         raise HTTPException(
@@ -318,34 +320,22 @@ async def update_task_status(
         )
 
 
+
 @router.delete("/tasks/{task_id}")
 async def delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: int = Depends(get_current_user),
-    current_user_role: str = Depends(get_current_user_role),
+    current_user_id: int = Depends(get_current_user),
+    user_role: str = Depends(get_current_user_role),
 ):
     log.info(f"Deleting task with id: {task_id}")
     try:
-        db_task = await db.execute(select(Task).filter(Task.id == task_id))
-        db_task = db_task.scalar()
-        if not db_task:
-            log.warning(f"Task with id {task_id} not found")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-            )
-        if int(current_user) != db_task.owner_id and current_user_role != "admin":
-            log.warning(
-                f"Unauthorized delete attempt for task id {task_id} by user id {current_user}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to delete this task",
-            )
+        db_task = await fetch_data_by_id(db, Task, task_id)
+        
+        await check_authorization_only_admin(db_task, user_role)
 
-        await db.delete(db_task)
-        await db.commit()
-        log.info(f"Task with id {task_id} deleted successfully")
+        await delete_instance(db, db_task)
+        
         return {"message": "Task deleted successfully"}
     except Exception as e:
         log.error(f"Failed to delete task: {e}")
@@ -355,38 +345,27 @@ async def delete_task(
         )
 
 
+
 @router.put("/task-delete-request/{task_id}")
 async def request_delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: int = Depends(get_current_user),
-    current_user_role: str = Depends(get_current_user_role),
+    current_user_id: int = Depends(get_current_user),
+    user_role: str = Depends(get_current_user_role),
 ):
     log.info(f"Deleting task with id: {task_id}")
     try:
-        db_task = await db.execute(select(Task).filter(Task.id == task_id))
-        db_task = db_task.scalar()
-        if not db_task:
-            log.warning(f"Task with id {task_id} not found")
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-            )
-        if int(current_user) != db_task.owner_id and current_user_role != "admin":
-            log.warning(
-                f"Unauthorized delete request attempt for task id {task_id} by user id {current_user}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="You don't have permission to delete this task",
-            )
+        db_task = await fetch_data_by_id(db, Task, task_id)
+        
+        await check_authorization_if_forbiden(current_user_id, db_task, user_role)
 
         db_task.delete_request = True
-        await db.commit()
-        await db.refresh(db_task)
+        updated_task = await update_instance(db, db_task)
+        
         log.info(f"Task with id {task_id} delete requested successfully")
-        return {"message": "Task delete requested successfully"}
+        return updated_task
     except Exception as e:
-        log.error(f"Failed to delete task: {e}")
+        log.error(f"Failed to request delete task: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete task: {str(e)}",

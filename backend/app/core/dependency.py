@@ -93,3 +93,23 @@ def validate_and_convert_enum_value(value: str, enum_type: Type[Enum]) -> Enum:
             detail=f"Invalid value '{value}' for enum. Allowed values are: {allowed_values}",
         )
     return enum_type(value)
+
+
+async def check_authorization_only_admin(
+    instance: Base, user_role: str
+) -> None:
+    if not admin_check(user_role):
+        log.warning(
+            f"Unauthorized update attempt for instance id {instance.id} by this user"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not allowed to update this resource",
+        )
+        
+async def check_user_active(user: User) -> None:
+    if not user.is_active:
+        log.warning(f"Inactive user attempted password change for user_id: {user.id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="User is not active"
+        )

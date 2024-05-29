@@ -11,10 +11,12 @@ from jose import jwt
 from pydantic import EmailStr
 from starlette.responses import JSONResponse
 
+from app.model.base_model import User
 from app.schema.auth_schema import TokenData
 from fastapi.responses import RedirectResponse
+from logger import log
 
-from app.util.hash import async_hash_password
+from app.util.hash import async_hash_password, verify_password
 
 load_dotenv()
 
@@ -60,6 +62,14 @@ def generate_verification_token(email: str) -> str:
     payload = {"email": email, "exp": expiration_time}
     token = jwt.encode(payload, VERIFICATION_KEY, algorithm=ALGORITHM)
     return token
+
+
+async def verify_old_password(user: User, old_password: str) -> None:
+    if not verify_password(old_password, user.password):
+        log.warning(f"Invalid old password for user_id: {user.id}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Password"
+        )
 
 
 def get_token_data(

@@ -10,6 +10,7 @@ from app.core.dependency import (
     check_authorization,
     check_existing_email,
     check_existing_username,
+    check_user_active,
     check_user_permission,
 )
 from app.core.security import (
@@ -19,11 +20,12 @@ from app.core.security import (
     get_current_user_role,
     hash_password,
     send_reset_email,
+    verify_old_password,
     verify_reset_token,
     verify_token,
 )
 from app.core.service import send_verification_email
-from app.db.crud import create_in_db, fetch_data_by_id, update_instance
+from app.db.crud import create_in_db, fetch_data_by_id, update_instance, update_instance_fields
 from app.db.database import get_db
 from app.model.base_model import User
 from app.schema.auth_schema import UserInResponse
@@ -340,28 +342,18 @@ async def change_password(
     log.info(f"Attempting to change password for user_id: {user_id}")
     try:
         user_id = int(user_id)
-        user = await db.execute(select(User).filter(User.id == user_id))
-        user = user.scalar_one()
+        user = await fetch_data_by_id(db, User, user_id)
 
-        if not user or not verify_password(old_password, user.password):
-            log.warning(f"Invalid old password for user_id: {user_id}")
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Password"
-            )
+        await verify_old_password(user, old_password)
+        await check_user_active(user)
 
-        if not user.is_active:
-            log.warning(
-                f"Inactive user attempted password change for user_id: {user_id}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="User is not active"
-            )
         hashed_password = await async_hash_password(new_password)
-        user.password = hashed_password
-        await db.commit()
+        await update_instance_fields(user, {'password': hashed_password})
+        await update_instance(db, user)
+        
         response.delete_cookie("token")
         log.info(f"Password changed successfully for user_id: {user_id}")
-        return {"message": "Password changed successful"}
+        return {"message": "Password changed successfully"}
 
     except Exception as e:
         log.error(f"Failed to change password: {e}")
