@@ -37,9 +37,7 @@ async def create_all_tables():
         await conn.run_sync(Base.metadata.create_all)
 
 
-async def get_db():
-    async with SessionLocal() as db:
-        try:
-            yield db
-        finally:
-            await db.close()
+async def get_db() -> AsyncSession:
+    async with SessionLocal() as session:
+        yield session
+

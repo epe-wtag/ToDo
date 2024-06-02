@@ -39,6 +39,8 @@ class User(Base):
 
     tasks = relationship("Task", back_populates="owner")
     
+
+    
     
     
 
@@ -59,3 +61,5 @@ class Task(Base):
     completed_at = Column(TIMESTAMP, nullable=True)
 
     owner = relationship("User", back_populates="tasks")
+    
+
