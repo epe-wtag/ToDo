@@ -35,3 +35,7 @@ class TaskList(BaseModel):
     total: int
     skip: int
     limit: int
+
+
+class Message(BaseModel):
+    message: str
