@@ -3,35 +3,14 @@ from typing import Optional
 
 from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
 from fastapi.security import HTTPBearer
-from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from jose import jwt
-from pydantic import EmailStr
-from starlette.responses import JSONResponse
 
-from app.core.config import (
-    MAIL_FROM,
-    MAIL_PASSWORD,
-    MAIL_USERNAME,
-    RESET_PASSWORD_KEY,
-    SECRET_KEY,
-    VERIFICATION_KEY,
-)
+
+from app.core.config import settings
 from app.model.base_model import User
 from app.schema.auth_schema import TokenData
 from app.util.hash import async_hash_password, verify_password
 from logger import log
-
-conf = ConnectionConfig(
-    MAIL_USERNAME=MAIL_USERNAME,
-    MAIL_PASSWORD=MAIL_PASSWORD,
-    MAIL_FROM=MAIL_FROM,
-    MAIL_PORT=587,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True,
-)
 
 
 app = FastAPI()
@@ -49,7 +28,7 @@ async def hash_password(password: str) -> str:
     return await async_hash_password(password)
 
 
-def create_access_token(data: dict, secret_key: str = SECRET_KEY) -> str:
+def create_access_token(data: dict, secret_key: str = settings.SECRET_KEY) -> str:
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {**data, "exp": expire}
     return jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
@@ -58,7 +37,7 @@ def create_access_token(data: dict, secret_key: str = SECRET_KEY) -> str:
 def generate_verification_token(email: str) -> str:
     expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     payload = {"email": email, "exp": expiration_time}
-    token = jwt.encode(payload, VERIFICATION_KEY, algorithm=ALGORITHM)
+    token = jwt.encode(payload, settings.VERIFICATION_KEY, algorithm=ALGORITHM)
     return token
 
 
@@ -86,7 +65,7 @@ def get_token_data(
             )
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
         return TokenData(id=str(payload.get("user_id")), role=str(payload.get("role")))
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -105,38 +84,13 @@ def get_token_data(
 def generate_reset_token(email: str) -> str:
     expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     payload = {"email": email, "exp": expiration_time}
-    token = jwt.encode(payload, RESET_PASSWORD_KEY, algorithm=ALGORITHM)
+    token = jwt.encode(payload, settings.RESET_PASSWORD_KEY, algorithm=ALGORITHM)
     return token
-
-
-async def send_reset_email(email: EmailStr, token: str) -> JSONResponse:
-    html = f"""
-    <html>
-      <head></head>
-      <body>
-        <p>Hello,</p>
-        <p>You have requested to reset your password. Please click the link below to reset your password:</p>
-        <p><a style="background-color: #008CBA; border: none; color: white; padding: 15px 32px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 4px 2px; cursor: pointer;"
-        href="http://localhost:3000/reset-password/{email}/{token}">Reset Password</a></p>
-        <p>If you did not request a password reset, please ignore this email.</p>
-      </body>
-    </html>
-    """
-
-    message = MessageSchema(
-        subject="Reset Password",
-        recipients=[email],
-        body=html,
-        subtype=MessageType.html,
-    )
-    fm = FastMail(conf)
-    await fm.send_message(message)
-    return JSONResponse(status_code=200, content={"message": "email has been sent"})
 
 
 def verify_token(email: str, token: str) -> bool:
     try:
-        payload = jwt.decode(token, VERIFICATION_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.VERIFICATION_KEY, algorithms=[ALGORITHM])
         response_email = payload.get("email")
         expiration = payload.get("exp")
         if not response_email or not expiration:
@@ -151,7 +105,7 @@ def verify_token(email: str, token: str) -> bool:
 
 def verify_reset_token(email: str, token: str) -> bool:
     try:
-        payload = jwt.decode(token, RESET_PASSWORD_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.RESET_PASSWORD_KEY, algorithms=[ALGORITHM])
         response_email = payload.get("email")
         expiration = payload.get("exp")
 

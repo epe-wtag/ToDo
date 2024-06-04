@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Form, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import SystemMessages
 from app.core.dependency import (
     admin_role_check,
     check_authorization_if_forbiden,
@@ -56,13 +57,13 @@ async def create_task(
             owner_id=user_id,
         )
         db_task = await task_crud.create(db, obj_in=task_data)
-        log.info(f"Task created successfully with id: {db_task.id}")
+        log.info(f"{SystemMessages.LOG_TASK_CREATED_SUCCESSFULLY} {db_task.id}")
         return db_task
     except Exception as e:
-        log.error(f"Failed to create task: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_CREATE_TASK} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create task: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_CREATE_TASK} {str(e)}",
         )
 
 
@@ -75,7 +76,7 @@ async def read_tasks(
     user_id: int = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role),
 ):
-    log.info(f"Fetching tasks with query: {query}, skip: {skip}, limit: {limit}")
+    log.info(f"{SystemMessages.LOG_ATTEMPT_FETCH_TASKS.format(query=query, skip=skip, limit=limit)}")
     try:
         admin = user_role == "admin"
         tasks, total = await task_crud.get_multi_with_query(
@@ -86,13 +87,14 @@ async def read_tasks(
             limit=limit,
         )
 
-        log.info(f"Fetched {len(tasks)} tasks")
+        log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
+
         return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
     except Exception as e:
-        log.error(f"Failed to fetch tasks: {e}")
+        log.error(f"Error occurred while fetching tasks: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch tasks: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASKS} {str(e)}",
         )
 
 
@@ -109,7 +111,7 @@ async def read_delete_request_tasks(
     user_id: int = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role),
 ):
-    log.info(f"Fetching tasks with delete request True, skip: {skip}, limit: {limit}")
+    log.info(f"{SystemMessages.LOG_FETCH_DELETE_REQUEST_TASKS.format(skip=skip, limit=limit)}")
     try:
         admin = admin_role_check(user_role)
         if admin:
@@ -117,14 +119,13 @@ async def read_delete_request_tasks(
                 db, skip=skip, limit=limit
             )
 
-            log.info(f"Fetched {len(tasks)} tasks")
+            log.info(f"{SystemMessages.LOG_FETCHED_TASKS.format(len(tasks))}")
             return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
-
     except Exception as e:
-        log.error(f"Failed to fetch tasks: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASKS} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch tasks: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASKS} {str(e)}",
         )
 
 
@@ -137,19 +138,19 @@ async def search_tasks(
     user_id: int = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role),
 ):
-    log.info(f"Searching tasks with query: {query}, skip: {skip}, limit: {limit}")
+    log.info(f"{SystemMessages.LOG_FETCH_SEARCH_TASKS.format(query=query, skip=skip, limit=limit)}")
     try:
         admin = admin_role_check(user_role)
 
         tasks, total = await task_crud.search(db, query, user_id, admin, skip, limit)
 
-        log.info(f"Fetched {len(tasks)} tasks")
+        log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
         return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
     except Exception as e:
-        log.error(f"Failed to search tasks: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to search tasks: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {str(e)}",
         )
 
 
@@ -168,7 +169,7 @@ async def filter_tasks(
         admin = admin_role_check(user_role)
 
         log.info(
-            f"Filter tasks endpoint called with parameters: task_status={task_status}, category={category}, due_date={due_date}, skip={skip}, limit={limit}, user_id={user_id}, user_role={user_role}"
+            f"{SystemMessages.LOG_FETCH_FILTER_TASKS.format(task_status=task_status, category=category, due_date=due_date, skip=skip, limit=limit, user_id=user_id, user_role=user_role)}"
         )
 
         tasks, total = await task_crud.filter_tasks(
@@ -182,17 +183,16 @@ async def filter_tasks(
             skip=skip,
             limit=limit,
         )
-        log.info(f"Total tasks: {total}")
-
+        log.info(f"{SystemMessages.LOG_FETCH_TOTAL_TASKS.format(total=total)}")
         return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
     except HTTPException as http_err:
         log.error(f"HTTP Exception: {http_err}")
         raise http_err
     except Exception as e:
-        log.error(f"Error occurred: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_FILTER_TASKS} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to filter tasks: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_FILTER_TASKS} {str(e)}",
         )
 
 
@@ -202,22 +202,22 @@ async def read_task(
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user),
 ):
-    log.info(f"Fetching task with id: {task_id}")
+    log.info(f"{SystemMessages.LOG_FETCH_TASK_BY_ID.format(task_id=task_id)}")
     try:
         task = await task_crud.get_by_id(db=db, id=task_id)
         if not task:
-            log.warning(f"Task with id {task_id} not found")
+            log.warning(f"{SystemMessages.WARNING_TASK_NOT_FOUND.format(task_id=task_id)}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
         user = await db.get(User, task.owner_id)
-        log.info(f"Task with id {task_id} fetched successfully")
+        log.info(f"{SystemMessages.LOG_FETCH_TASK_SUCCESS.format(task_id=task_id)}")
         return {"task": task, "user": user}
     except Exception as e:
-        log.error(f"Failed to fetch task: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASK} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch task: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASK} {str(e)}",
         )
 
 
@@ -233,11 +233,11 @@ async def update_task(
     current_user_id: int = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role),
 ):
-    log.info(f"Updating task with id: {task_id}")
+    log.info(f"{SystemMessages.LOG_UPDATE_TASK_BY_ID.format(task_id=task_id)}")
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
         if not db_task:
-            log.warning(f"Task with id {task_id} not found")
+            log.warning(f"{SystemMessages.WARNING_TASK_NOT_FOUND.format(task_id=task_id)}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
@@ -259,20 +259,19 @@ async def update_task(
             db_obj=db_task,
             obj_in=task_data,
         )
-        log.info(f"Task with id {task_id} updated successfully")
+        log.info(f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
         return updated_task
-
     except SQLAlchemyError as e:
         log.error(f"Database error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update task: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK} {str(e)}",
         )
     except Exception as e:
-        log.error(f"Failed to update task: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update task: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK} {str(e)}",
         )
 
 
@@ -286,7 +285,7 @@ async def update_task_status(
     current_user_id: int = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role),
 ):
-    log.info(f"Updating status of task with id: {task_id} to {status}")
+    log.info(f"{SystemMessages.LOG_UPDATE_TASK_STATUS.format(task_id=task_id, status=status)}")
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
@@ -296,13 +295,13 @@ async def update_task_status(
             db, db_obj=db_task, obj_in={"status": status}
         )
 
-        log.info(f"Status of task with id {task_id} updated successfully")
+        log.info(f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
         return updated_task
     except Exception as e:
-        log.error(f"Failed to update task status: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK_STATUS} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update task status: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK_STATUS} {str(e)}",
         )
 
 
@@ -315,7 +314,7 @@ async def delete_task(
     current_user_id: int = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role),
 ):
-    log.info(f"Deleting task with id: {task_id}")
+    log.info(f"{SystemMessages.LOG_DELETING_TASK.format(task_id=task_id)}")
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
@@ -325,10 +324,10 @@ async def delete_task(
 
         return {"message": f"Task deleted successfully by {current_user_id}"}
     except Exception as e:
-        log.error(f"Failed to delete task: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_DELETE_TASK} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete task: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_DELETE_TASK} {str(e)}",
         )
 
 
@@ -343,7 +342,7 @@ async def request_delete_task(
     current_user_id: int = Depends(get_current_user),
     user_role: str = Depends(get_current_user_role),
 ):
-    log.info(f"Deleting task with id: {task_id}")
+    log.info(f"{SystemMessages.LOG_TASK_DELETE_REQUEST.format(task_id=task_id)}")
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
@@ -353,11 +352,11 @@ async def request_delete_task(
             db, db_obj=db_task, obj_in={"delete_request": True}
         )
 
-        log.info(f"Task with id {task_id} delete requested successfully")
+        log.info(f"{SystemMessages.LOG_TASK_DELETE_REQUEST_SUCCESS.format(task_id=task_id)}")
         return updated_task
     except Exception as e:
-        log.error(f"Failed to request delete task: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_REQUEST_DELETE_TASK} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to delete task: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_REQUEST_DELETE_TASK} {str(e)}",
         )

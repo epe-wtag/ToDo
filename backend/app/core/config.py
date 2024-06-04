@@ -6,24 +6,30 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from pydantic import ConfigDict
+from pydantic_settings import BaseSettings
+
 from logger import log
 
 
 load_dotenv()
 
+class Settings(BaseSettings):
+    model_config = ConfigDict(case_sensitive=True)
+    
+    DB_HOST: str = os.getenv("DB_HOST")
+    DB_HOST_LOCAL: str = os.getenv("DB_HOST_local")
+    DB_DATABASE: str = os.getenv("DB_DATABASE")
+    DB_USER: str = os.getenv("DB_USER")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD")
+    MAIL_USERNAME: str =os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD: str =os.getenv("PASS")
+    MAIL_FROM: str =os.getenv("MAIL_FROM")
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
+    VERIFICATION_KEY: str = os.getenv("VERIFICATION_KEY")
+    RESET_PASSWORD_KEY: str = os.getenv("RESET_PASSWORD_KEY")
 
-DB_HOST = os.getenv("DB_HOST")
-DB_HOST_LOCAL = os.getenv("DB_HOST_local")
-DB_DATABASE = os.getenv("DB_DATABASE")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-MAIL_USERNAME=os.getenv("EMAIL")
-MAIL_PASSWORD=os.getenv("PASS")
-MAIL_FROM=os.getenv("EMAIL")
-SECRET_KEY = os.getenv("SECRET_KEY")
-VERIFICATION_KEY = os.getenv("VERIFICATION_KEY")
-RESET_PASSWORD_KEY = os.getenv("RESET_PASSWORD_KEY")
-
+settings = Settings()
 
 
 
