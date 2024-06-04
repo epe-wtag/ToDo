@@ -3,17 +3,17 @@ import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from app.core.config import DB_DATABASE, DB_HOST, DB_HOST_LOCAL, DB_PASSWORD, DB_USER
+from app.core.config import settings
 
 DB_URL = os.environ.get("DB_URL")
 
 
 if DB_URL:
     URL_DATABASE = (
-        f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:5432/{DB_DATABASE}"
+        f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:5432/{settings.DB_DATABASE}"
     )
 else:
-    URL_DATABASE = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST_LOCAL}:5432/{DB_DATABASE}"
+    URL_DATABASE = f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST_LOCAL}:5432/{settings.DB_DATABASE}"
 
 
 engine = create_async_engine(
@@ -40,4 +40,3 @@ async def create_all_tables():
 async def get_db() -> AsyncSession:
     async with SessionLocal() as session:
         yield session
-

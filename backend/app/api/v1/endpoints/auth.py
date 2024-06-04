@@ -5,7 +5,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.service import send_verification_email
+from app.core.service import send_reset_email, send_verification_email
+from app.core.constants import SystemMessages
 from app.db.crud.crud_auth import user_crud
 
 from app.core.dependency import (
@@ -18,7 +19,6 @@ from app.core.security import (
     generate_reset_token,
     get_current_user,
     get_current_user_role,
-    send_reset_email,
     verify_old_password,
     verify_reset_token,
     verify_token,
@@ -65,15 +65,15 @@ async def create_user(
 
         user = await user_crud.create(db, obj_in=user_in)
 
-        log.info("User created:", user)
+        log.info(SystemMessages.SUCCESS_USER_CREATED, user)
         await send_verification_email(user.email)
         return user
 
     except Exception as e:
-        log.error(f"Failed to create user: {e}")
+        log.error(f"{SystemMessages.ERROR_CREATE_USER}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create user.",
+            detail=SystemMessages.ERROR_CREATE_USER_DETAIL,
         )
 
 
@@ -105,11 +105,11 @@ async def verify_email(
         else:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with email {email} not found",
+                detail=f"{SystemMessages.ERROR_USER_NOT_FOUND} {email}",
             )
     else:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Verification failed"
+            status_code=status.HTTP_400_BAD_REQUEST, detail=SystemMessages.ERROR_VERIFICATION_FAILED
         )
 
 
@@ -118,9 +118,9 @@ async def verify_email(
     response_model=UserInResponse,
     status_code=status.HTTP_200_OK,
     responses={
-        200: {"model": UserInResponse, "description": "User retrieved successfully"},
-        404: {"description": "User not found"},
-        500: {"description": "Internal Server Error"},
+        200: {"model": UserInResponse, "description": SystemMessages.SUCCESS_USER_FETCHED},
+        404: {"description": SystemMessages.ERROR_USER_NOT_FOUND_ID},
+        500: {"description": SystemMessages.ERROR_INTERNAL_SERVER},
     },
 )
 async def get_user(
@@ -133,17 +133,17 @@ async def get_user(
     if user:
         permission = await check_user_permission(int(user_id), admin, id)
         if permission:
-            log.success(f"User with id {id} fetched successfully")
+            log.success(f"{SystemMessages.SUCCESS_USER_FETCHED} : {id}")
             return user
         else:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Permission denied",
+                detail=SystemMessages.ERROR_PERMISSION_DENIED,
             )
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {id} not found",
+            detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
         )
 
 
@@ -151,9 +151,9 @@ async def get_user(
     "/user/{id}",
     response_model=UserInResponse,
     responses={
-        200: {"model": UserInResponse, "description": "User updated successfully"},
-        404: {"description": "User not found"},
-        500: {"description": "Internal Server Error"},
+        200: {"model": UserInResponse, "description": SystemMessages.SUCCESS_USER_FETCHED},
+        404: {"description": SystemMessages.ERROR_USER_NOT_FOUND_ID},
+        500: {"description": SystemMessages.ERROR_INTERNAL_SERVER},
     },
     status_code=status.HTTP_200_OK,
 )
@@ -166,14 +166,14 @@ async def update_user(
     db: AsyncSession = Depends(get_db),
     user_id: int = Depends(get_current_user),
 ):
-    log.info(f"Attempting to update user with id: {id}")
+    log.info(f"{SystemMessages.LOG_ATTEMPT_UPDATE_USER} {id}")
     try:
         user = await user_crud.get(db, id)
         if not user:
-            log.warning(f"User with id {id} does not exist")
+            log.warning(f"{SystemMessages.LOG_USER_DOES_NOT_EXIST}")
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"User with id: {id} does not exist",
+                detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
 
         await check_authorization(user_id, user)
@@ -190,14 +190,14 @@ async def update_user(
 
         updated_user = await user_crud.update(db, db_obj=user, obj_in=user_update)
 
-        log.success(f"User with id {id} updated successfully")
+        log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")
         return updated_user
 
     except Exception as e:
-        log.error(f"Failed to update user: {e}")
+        log.error(f"{SystemMessages.ERROR_INTERNAL_SERVER}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update user: {str(e)}",
+            detail=f"{SystemMessages.ERROR_INTERNAL_SERVER}: {str(e)}",
         )
 
 
@@ -212,27 +212,27 @@ async def login(
     password: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
-    log.info(f"Attempting login for email: {email}")
+    log.info(f"{SystemMessages.LOG_ATTEMPT_LOGIN} {email}")
     try:
         user = await user_crud.get_by_email(db, email=email)
         if user is None:
-            log.error(f"User not found for email: {email}")
+            log.error(f"{SystemMessages.LOG_USER_NOT_FOUND} {email}")
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials"
+                status_code=status.HTTP_403_FORBIDDEN, detail=SystemMessages.ERROR_INVALID_CREDENTIALS
             )
 
-        log.success(f"User found: {user}")
+        log.success(f"{SystemMessages.LOG_USER_FOUND} {user}")
 
         if not verify_password(password, user.password):
-            log.error(f"Invalid password for email: {email}")
+            log.error(f"{SystemMessages.LOG_INVALID_PASSWORD} {email}")
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Credentials"
+                status_code=status.HTTP_403_FORBIDDEN, detail=SystemMessages.ERROR_INVALID_CREDENTIALS
             )
 
         if not user.is_active:
-            log.error(f"Inactive user attempted login with email: {email}")
+            log.error(f"{SystemMessages.LOG_INACTIVE_USER_LOGIN} {email}")
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="User is not active"
+                status_code=status.HTTP_403_FORBIDDEN, detail=SystemMessages.ERROR_USER_NOT_ACTIVE
             )
 
         access_token = create_access_token(data={"user_id": user.id, "role": user.role})
@@ -250,20 +250,20 @@ async def login(
             samesite="none",
             secure=True,
         )
-        log.success(f"User with email {email} logged in successfully")
+        log.success(f"{SystemMessages.LOG_USER_LOGGED_IN_SUCCESSFULLY} {email}")
         return response
 
     except NoResultFound:
-        log.error(f"User not found for email: {email}")
+        log.error(f"{SystemMessages.LOG_USER_NOT_FOUND} {email}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND, detail=SystemMessages.ERROR_USER_NOT_FOUND
         )
 
     except Exception as e:
-        log.error(f"Failed to log in: {e}")
+        log.error(f"{SystemMessages.LOG_USER_LOGIN_FAILED} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to log in: {str(e)}",
+            detail=f"{SystemMessages.ERROR_INTERNAL_SERVER}: {str(e)}",
         )
 
 
@@ -274,9 +274,9 @@ async def login(
     description="User logout",
 )
 async def logout(response: Response):
-    log.info("Logging out user")
+    log.info(SystemMessages.LOG_LOGGING_OUT_USER)
     response.delete_cookie("token")
-    return {"message": "Logged out successfully"}
+    return {"message": SystemMessages.SUCCESS_LOGGED_OUT}
 
 
 @router.post(
@@ -286,27 +286,28 @@ async def logout(response: Response):
     description="Forget password",
 )
 async def forget_password(email: str = Form(...), db: AsyncSession = Depends(get_db)):
-    log.info(f"Attempting to send password reset email to: {email}")
+    log.info(f"{SystemMessages.LOG_SENDING_RESET_EMAIL} {email}")
     try:
         user = await user_crud.get_by_email(db, email=email)
 
         if not user:
-            log.warning(f"User not found for email: {email}")
+            log.warning(f"{SystemMessages.LOG_USER_NOT_FOUND_FOR_EMAIL} {email}")
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_DETAIL}",
             )
 
         reset_token = generate_reset_token(email)
         await send_reset_email(email, reset_token)
-        log.info(f"Password reset email sent successfully to: {email}")
+        log.info(f"{SystemMessages.SUCCESS_RESET_EMAIL_SENT} to: {email}")
 
-        return {"message": "Password reset email sent successfully"}
+        return {"message": SystemMessages.SUCCESS_RESET_EMAIL_SENT}
 
     except Exception as e:
-        log.error(f"Failed to send reset email: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_SEND_RESET_EMAIL} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send reset email: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_SEND_RESET_EMAIL} {str(e)}",
         )
 
 
@@ -322,14 +323,15 @@ async def reset_password(
     token: str = Form(...),
     db: AsyncSession = Depends(get_db),
 ):
-    log.info(f"Attempting to reset password for email: {email}")
+    log.info(f"{SystemMessages.LOG_RESET_PASSWORD_ATTEMPT} {email}")
     try:
         verification_result = verify_reset_token(email, token)
 
         if not verification_result:
-            log.warning(f"Invalid reset token for email: {email}")
+            log.warning(f"{SystemMessages.WARNING_INVALID_RESET_TOKEN} {email}")
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid reset token"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=SystemMessages.ERROR_INVALID_RESET_TOKEN,
             )
 
         user = await user_crud.get_by_email(db, email=email)
@@ -338,21 +340,22 @@ async def reset_password(
         user.password = hashed_password
 
         await db.commit()
-        log.info(f"Password reset successful for email: {email}")
+        log.info(f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}")
 
-        return {"message": "Password reset successful"}
+        return {"message": f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}"}
 
     except NoResultFound:
-        log.warning(f"User not found for email: {email}")
+        log.warning(f"{SystemMessages.WARNING_USER_NOT_FOUND_FOR_EMAIL} {email}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{SystemMessages.WARNING_USER_NOT_FOUND_FOR_EMAIL} {email}",
         )
 
     except Exception as e:
-        log.error(f"Failed to reset password: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_RESET_PASSWORD} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to reset password: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_RESET_PASSWORD} {str(e)}",
         )
 
 
@@ -369,7 +372,7 @@ async def change_password(
     user_id: int = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    log.info(f"Attempting to change password for user_id: {user_id}")
+    log.info(f"{SystemMessages.LOG_CHANGE_PASSWORD_ATTEMPT} {user_id}")
     try:
         user_id = int(user_id)
         user = await user_crud.get(db, int(user_id))
@@ -381,12 +384,12 @@ async def change_password(
         await user_crud.update(db=db, db_obj=user, obj_in={"password": hashed_password})
 
         response.delete_cookie("token")
-        log.info(f"Password changed successfully for user_id: {user_id}")
-        return {"message": "Password changed successfully"}
+        log.info(f"{SystemMessages.SUCCESS_PASSWORD_CHANGED} {user_id}")
+        return {"message": f"{SystemMessages.SUCCESS_PASSWORD_CHANGED} {user_id}"}
 
     except Exception as e:
-        log.error(f"Failed to change password: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_CHANGE_PASSWORD} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to change password: {str(e)}",
+            detail=f"{SystemMessages.ERROR_FAILED_TO_CHANGE_PASSWORD} {str(e)}",
         )
