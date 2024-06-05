@@ -2,26 +2,20 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
 from app.core.dependency import (
     admin_role_check,
-    check_authorization_if_forbiden,
-    check_authorization_only_admin,
     validate_and_convert_enum_value,
 )
-
-
+from app.core.security import get_current_user, get_token_data
 from app.db.crud.crud_task import task_crud
-
-
-from app.core.security import get_current_user, get_current_user_role
-
 from app.db.database import get_db
 from app.model.base_model import Category, User
+from app.schema.auth_schema import TokenData
 from app.schema.task_schema import Message, TaskCreate, TaskInDB, TaskList
-from sqlalchemy.exc import SQLAlchemyError
 from logger import log
 
 router = APIRouter(
@@ -44,7 +38,7 @@ async def create_task(
     category: str = Form(...),
     completed_at: str = Form(None),
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user),
+    token_data: TokenData = Depends(get_token_data),
 ):
     try:
         task_data = TaskCreate(
@@ -54,7 +48,7 @@ async def create_task(
             due_date=due_date,
             category=category,
             completed_at=completed_at,
-            owner_id=user_id,
+            owner_id=token_data.id,
         )
         db_task = await task_crud.create(db, obj_in=task_data)
         log.info(f"{SystemMessages.LOG_TASK_CREATED_SUCCESSFULLY} {db_task.id}")
@@ -73,15 +67,14 @@ async def read_tasks(
     limit: int = 8,
     query: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user),
-    user_role: str = Depends(get_current_user_role),
+    token_data: TokenData = Depends(get_token_data),
 ):
     log.info(f"{SystemMessages.LOG_ATTEMPT_FETCH_TASKS.format(query=query, skip=skip, limit=limit)}")
     try:
-        admin = user_role == "admin"
+        admin = token_data.role == "admin"
         tasks, total = await task_crud.get_multi_with_query(
             db=db,
-            user_id=int(user_id) if not admin else None,
+            user_id=int(token_data.id) if not admin else None,
             query=query,
             skip=skip,
             limit=limit,
@@ -108,12 +101,11 @@ async def read_delete_request_tasks(
     limit: int = 8,
     query: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user),
-    user_role: str = Depends(get_current_user_role),
+    token_data: TokenData = Depends(get_token_data),
 ):
     log.info(f"{SystemMessages.LOG_FETCH_DELETE_REQUEST_TASKS.format(skip=skip, limit=limit)}")
     try:
-        admin = admin_role_check(user_role)
+        admin = admin_role_check(token_data.role)
         if admin:
             tasks, total = await task_crud.get_delete_requested_tasks(
                 db, skip=skip, limit=limit
@@ -135,14 +127,13 @@ async def search_tasks(
     skip: int = 0,
     limit: int = 8,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user),
-    user_role: str = Depends(get_current_user_role),
+    token_data: TokenData = Depends(get_token_data),
 ):
     log.info(f"{SystemMessages.LOG_FETCH_SEARCH_TASKS.format(query=query, skip=skip, limit=limit)}")
     try:
-        admin = admin_role_check(user_role)
+        admin = admin_role_check(token_data.role)
 
-        tasks, total = await task_crud.search(db, query, user_id, admin, skip, limit)
+        tasks, total = await task_crud.search(db, query, token_data.id, admin, skip, limit)
 
         log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
         return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
@@ -162,20 +153,19 @@ async def filter_tasks(
     skip: int = 0,
     limit: int = 8,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user),
-    user_role: str = Depends(get_current_user_role),
+    token_data: TokenData = Depends(get_token_data),
 ):
     try:
-        admin = admin_role_check(user_role)
+        admin = admin_role_check(token_data.role)
 
         log.info(
-            f"{SystemMessages.LOG_FETCH_FILTER_TASKS.format(task_status=task_status, category=category, due_date=due_date, skip=skip, limit=limit, user_id=user_id, user_role=user_role)}"
+            f"{SystemMessages.LOG_FETCH_FILTER_TASKS.format(task_status=task_status, category=category, due_date=due_date, skip=skip, limit=limit, user_id=token_data.id, user_role=token_data.role)}"
         )
 
         tasks, total = await task_crud.filter_tasks(
             db=db,
-            user_id=user_id,
-            user_role=user_role,
+            user_id=token_data.id,
+            user_role=token_data.role,
             admin=admin,
             task_status=task_status,
             category=category,
@@ -200,7 +190,7 @@ async def filter_tasks(
 async def read_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    user_id: int = Depends(get_current_user),
+    token_data: TokenData = Depends(get_token_data),
 ):
     log.info(f"{SystemMessages.LOG_FETCH_TASK_BY_ID.format(task_id=task_id)}")
     try:
@@ -230,8 +220,7 @@ async def update_task(
     category: str = Form(...),
     due_date: datetime = Form(...),
     db: AsyncSession = Depends(get_db),
-    current_user_id: int = Depends(get_current_user),
-    user_role: str = Depends(get_current_user_role),
+    token_data: TokenData = Depends(get_token_data),
 ):
     log.info(f"{SystemMessages.LOG_UPDATE_TASK_BY_ID.format(task_id=task_id)}")
     try:
@@ -242,25 +231,34 @@ async def update_task(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
 
-        await check_authorization_if_forbiden(current_user_id, db_task, user_role)
+        if int(token_data.id)==db_task.owner_id or token_data.role=='admin':
+            category_enum = validate_and_convert_enum_value(category, Category)
+            task_data = {
+                "title": title,
+                "description": description,
+                "due_date": due_date,
+                "category": category_enum,
+                "owner_id": owner_id,
+            }
 
-        category_enum = validate_and_convert_enum_value(category, Category)
-
-        task_data = {
-            "title": title,
-            "description": description,
-            "due_date": due_date,
-            "category": category_enum,
-            "owner_id": owner_id,
-        }
-
-        updated_task = await task_crud.update(
-            db=db,
-            db_obj=db_task,
-            obj_in=task_data,
+            updated_task = await task_crud.update(
+                db=db,
+                db_obj=db_task,
+                obj_in=task_data,
+            )
+            log.info(f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
+            return updated_task
+        
+        else:
+            raise ValueError("Unauthorized attempt")
+        
+    except ValueError:
+        log.warning(f"Unauthorized attempt to update instance with id: {id}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="You do not have permission to update this resource"
         )
-        log.info(f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
-        return updated_task
+            
     except SQLAlchemyError as e:
         log.error(f"Database error: {e}")
         raise HTTPException(
@@ -282,21 +280,28 @@ async def update_task_status(
     task_id: int,
     status: bool = Form(...),
     db: AsyncSession = Depends(get_db),
-    current_user_id: int = Depends(get_current_user),
-    user_role: str = Depends(get_current_user_role),
+    token_data: TokenData = Depends(get_token_data),
 ):
     log.info(f"{SystemMessages.LOG_UPDATE_TASK_STATUS.format(task_id=task_id, status=status)}")
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        await check_authorization_if_forbiden(current_user_id, db_task, user_role)
-
-        updated_task = await task_crud.update(
-            db, db_obj=db_task, obj_in={"status": status}
+        if int(token_data.id)==db_task.owner_id or token_data.role=='admin':
+            updated_task = await task_crud.update(
+                db, db_obj=db_task, obj_in={"status": status}
+            )
+            log.info(f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
+            return updated_task
+        else:
+            raise ValueError("Unauthorized attempt")
+        
+    except ValueError:
+        log.warning(f"Unauthorized attempt to update instance with id: {id}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="You do not have permission to update this resource"
         )
-
-        log.info(f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
-        return updated_task
+            
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK_STATUS} {e}")
         raise HTTPException(
@@ -311,18 +316,22 @@ async def update_task_status(
 async def delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user_id: int = Depends(get_current_user),
-    user_role: str = Depends(get_current_user_role),
+    token_data: TokenData = Depends(get_token_data),
 ):
     log.info(f"{SystemMessages.LOG_DELETING_TASK.format(task_id=task_id)}")
     try:
-        db_task = await task_crud.get_by_id(db=db, id=task_id)
-
-        await check_authorization_only_admin(db_task, user_role)
-
-        await task_crud.remove(db, id=task_id)
-
-        return {"message": f"Task deleted successfully by {current_user_id}"}
+        if token_data.role=='admin':
+            await task_crud.remove(db, id=task_id)
+            return {"message": f"Task deleted successfully by {token_data.id}"}
+        else:
+            raise ValueError("You are not allowed to update this resource")
+    except ValueError as e:
+        log.warning(
+            f"Unauthorized update attempt for instance id {task_id} by this user"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail=str(e)
+        )
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_DELETE_TASK} {e}")
         raise HTTPException(
@@ -339,24 +348,31 @@ async def delete_task(
 async def request_delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user_id: int = Depends(get_current_user),
-    user_role: str = Depends(get_current_user_role),
+    token_data: TokenData = Depends(get_token_data),
 ):
     log.info(f"{SystemMessages.LOG_TASK_DELETE_REQUEST.format(task_id=task_id)}")
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        await check_authorization_if_forbiden(current_user_id, db_task, user_role)
-
-        updated_task = await task_crud.update(
-            db, db_obj=db_task, obj_in={"delete_request": True}
+        if int(token_data.id)==db_task.owner_id or token_data.role=='admin':
+            updated_task = await task_crud.update(
+                db, db_obj=db_task, obj_in={"delete_request": True}
+            )
+            log.info(f"{SystemMessages.LOG_TASK_DELETE_REQUEST_SUCCESS.format(task_id=task_id)}")
+            return updated_task
+        else:
+            raise ValueError("Unauthorized attempt")
+        
+    except ValueError:
+        log.warning(f"Unauthorized attempt to update instance with id: {id}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="You do not have permission to update this resource"
         )
-
-        log.info(f"{SystemMessages.LOG_TASK_DELETE_REQUEST_SUCCESS.format(task_id=task_id)}")
-        return updated_task
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_REQUEST_DELETE_TASK} {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_REQUEST_DELETE_TASK} {str(e)}",
         )
+ 

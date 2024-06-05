@@ -5,13 +5,11 @@ from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
 from fastapi.security import HTTPBearer
 from jose import jwt
 
-
 from app.core.config import settings
 from app.model.base_model import User
 from app.schema.auth_schema import TokenData
 from app.util.hash import async_hash_password, verify_password
 from logger import log
-
 
 app = FastAPI()
 
@@ -24,8 +22,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 300
 TOKEN_EXPIRE_MINUTES = 30
 
 
-async def hash_password(password: str) -> str:
-    return await async_hash_password(password)
+def hash_password(password: str) -> str:
+    return async_hash_password(password)
 
 
 def create_access_token(data: dict, secret_key: str = settings.SECRET_KEY) -> str:
@@ -41,7 +39,7 @@ def generate_verification_token(email: str) -> str:
     return token
 
 
-async def verify_old_password(user: User, old_password: str) -> None:
+def verify_old_password(user: User, old_password: str) -> None:
     if not verify_password(old_password, user.password):
         log.warning(f"Invalid old password for user_id: {user.id}")
         raise HTTPException(

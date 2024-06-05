@@ -38,7 +38,7 @@ const Profile = () => {
 
   const fetchUserData = async () => {
     try {
-      const response = await fetch(`/api/v1/auth/user/${credentials_.id}`, {
+      const response = await fetch(`/api/v1/user/user/${credentials_.id}`, {
         headers: {
           "Content-Type": "application/json",
         },
@@ -79,7 +79,7 @@ const Profile = () => {
     }
 
     try {
-      const response = await fetch(`/api/v1/auth/user/${credentials_.id}`, requestOption);
+      const response = await fetch(`/api/v1/user/user/${credentials_.id}`, requestOption);
       if (response.ok) {
         Swal.fire({
           icon: 'success',
