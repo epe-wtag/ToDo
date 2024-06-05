@@ -1,12 +1,12 @@
 from typing import Any, Dict, Optional, Union
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.crud.crud_base import CRUDBase
 from app.model.base_model import User
 from app.schema.auth_schema import UserCreate, UserUpdate
 from app.util.hash import async_hash_password
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
@@ -18,7 +18,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         create_data = obj_in.dict()
         create_data.pop("password")
         db_obj = User(**create_data)
-        db_obj.password = await async_hash_password(obj_in.password)
+        db_obj.password = async_hash_password(obj_in.password)
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)

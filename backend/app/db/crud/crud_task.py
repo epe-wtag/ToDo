@@ -1,15 +1,14 @@
 from datetime import datetime
-from fastapi import HTTPException, status
-from logger import log
-from sqlalchemy import desc, or_, cast, String
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from sqlalchemy import func, select
+from fastapi import HTTPException, status
+from sqlalchemy import String, cast, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.crud.crud_base import CRUDBase
 from app.model.base_model import Category, Task
 from app.schema.task_schema import TaskCreate, TaskUpdate
+from logger import log
 
 
 class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
@@ -37,13 +36,12 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
             base_query = base_query.filter(Task.title.ilike(f"%{query}%"))
 
         total = await db.scalar(
-            select(func.count(Task.id)).filter(base_query.whereclause)
-        )
+                select(func.count()).select_from(base_query.subquery())
+            )
         result = await db.execute(
             base_query.order_by(desc(Task.id)).offset(skip).limit(limit)
         )
         tasks = result.scalars().all()
-
         return tasks, total
 
     async def create(self, db: AsyncSession, *, obj_in: TaskCreate) -> Task:
@@ -81,7 +79,7 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
     async def remove(self, db: AsyncSession, *, id: int) -> Task:
         obj = await self.get(db, id)
         if obj:
-            db.delete(obj)
+            await db.delete(obj)
             await db.commit()
         return obj
 

@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer
+from fastapi.templating import Jinja2Templates
 from fastapi_mail import ConnectionConfig, FastMail, MessageSchema, MessageType
 from pydantic import EmailStr
-from fastapi.templating import Jinja2Templates
+
 from app.core.config import settings
 from app.core.security import generate_verification_token
 

@@ -1,86 +1,42 @@
+from unittest.mock import MagicMock
 
-from unittest.mock import patch
+import pytest
+from fastapi import status
+from httpx import AsyncClient
+from pytest_mock import mocker
 
-from main import app
 
-
-
-# Test case with debug prints
-def test_create_user(test_client):
-    print("Executing test_create_user")
-    data = {
-        "username": "test_user",
+@pytest.mark.asyncio
+async def test_create_user(client: AsyncClient, mock_send_verification_email, mock_user_crud_create):
+    user_data = {
+        "username": "testuser",
         "email": "test@example.com",
         "password": "password123",
         "role": "user",
         "first_name": "Test",
         "last_name": "User",
         "contact_number": "1234567890",
-        "gender": "male"
+        "gender": "Other"
     }
-    response = test_client.post("/api/v1/auth/create-user", json=data) 
-    print(f"Response status code: {response.status_code}")
-    print(f"Response content: {response.content}")
-    assert response.status_code == 201
-    response_json = response.json()
-    assert "id" in response_json
-    assert response_json["email"] == "test@example.com"
 
+    response = await client.post("/api/v1/auth/create-user", data=user_data)
+    
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["email"] == "test@example.com"
+    mock_send_verification_email.assert_called_once_with("test@example.com")
+    mock_user_crud_create.assert_called_once()
 
+@pytest.mark.asyncio
+async def test_login(client: AsyncClient, mock_user_crud_get_by_email, mock_verify_password, mock_create_access_token):
+    login_data = {
+        "email": "test@example.com",
+        "password": "password123"
+    }
 
-
-
-# @patch("app.api.v1.endpoints.auth.send_verification_email")
-# def test_verify_email(mock_send_verification_email, test_client):
-#     data = {
-#         "email": "test@example.com",
-#         "v_token": "verification_token"
-#     }
-#     response = test_client.post("/auth/verify", data=data)
-#     assert response.status_code == 200
-#     assert mock_send_verification_email.called
-
-
-# def test_login(test_client):
-#     data = {
-#         "email": "test@example.com",
-#         "password": "password123"
-#     }
-#     response = test_client.post("/auth/login", data=data)
-#     assert response.status_code == 200
-#     assert "token" in response.cookies
-
-
-# def test_logout(test_client):
-#     response = test_client.post("/auth/logout")
-#     assert response.status_code == 200
-#     assert "token" not in response.cookies
-
-
-# @patch("app.api.v1.endpoints.auth.send_reset_email")
-# def test_forget_password(mock_send_reset_email, test_client):
-#     data = {
-#         "email": "test@example.com"
-#     }
-#     response = test_client.post("/auth/forget-password", data=data)
-#     assert response.status_code == 200
-#     assert mock_send_reset_email.called
-
-
-# def test_reset_password(test_client):
-#     data = {
-#         "email": "test@example.com",
-#         "password": "new_password",
-#         "token": "reset_token"
-#     }
-#     response = test_client.post("/auth/reset-password", data=data)
-#     assert response.status_code == 200
-
-
-# def test_change_password(test_client):
-#     data = {
-#         "old_password": "password123",
-#         "new_password": "new_password"
-#     }
-#     response = test_client.post("/auth/change-password", data=data)
-#     assert response.status_code == 200
+    response = await client.post("/api/v1/auth/login", data=login_data)
+    
+    assert response.status_code == status.HTTP_200_OK
+    assert response.cookies["token"] == "testaccesstoken"
+    mock_user_crud_get_by_email.assert_called_once_with(mocker.ANY, email="test@example.com")
+    mock_verify_password.assert_called_once_with("password123", "$2b$12$somehashedpassword")
+    mock_create_access_token.assert_called_once_with(data={"user_id": 1, "role": "user"})
