@@ -38,11 +38,6 @@ class User(Base):
     created_at = Column(TIMESTAMP, default=func.now(), nullable=False)
 
     tasks = relationship("Task", back_populates="owner")
-    
-
-    
-    
-    
 
 
 class Task(Base):
@@ -61,5 +56,3 @@ class Task(Base):
     completed_at = Column(TIMESTAMP, nullable=True)
 
     owner = relationship("User", back_populates="tasks")
-    
-
