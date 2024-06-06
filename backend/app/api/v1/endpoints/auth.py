@@ -12,7 +12,6 @@ from app.core.dependency import (
 from app.core.security import (
     create_access_token,
     generate_reset_token,
-    get_current_user,
     get_token_data,
     verify_old_password,
     verify_reset_token,
