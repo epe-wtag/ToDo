@@ -27,13 +27,13 @@ def hash_password(password: str) -> str:
 
 
 def create_access_token(data: dict, secret_key: str = settings.SECRET_KEY) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(tz=datetime.timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {**data, "exp": expire}
     return jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
 
 
 def generate_verification_token(email: str) -> str:
-    expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    expiration_time = datetime.now(tz=datetime.timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     payload = {"email": email, "exp": expiration_time}
     token = jwt.encode(payload, settings.VERIFICATION_KEY, algorithm=ALGORITHM)
     return token
@@ -80,7 +80,7 @@ def get_token_data(
 
 
 def generate_reset_token(email: str) -> str:
-    expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    expiration_time = datetime.now(tz=datetime.timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     payload = {"email": email, "exp": expiration_time}
     token = jwt.encode(payload, settings.RESET_PASSWORD_KEY, algorithm=ALGORITHM)
     return token
@@ -93,8 +93,8 @@ def verify_token(email: str, token: str) -> bool:
         expiration = payload.get("exp")
         if not response_email or not expiration:
             return False
-        expiration_datetime = datetime.utcfromtimestamp(expiration)
-        if expiration_datetime < datetime.utcnow():
+        expiration_datetime = datetime.fromtimestamp(expiration, tz=datetime.timezone.utc)
+        if expiration_datetime < datetime.now(tz=datetime.timezone.utc):
             return False
         return response_email == email
     except jwt.JWTError:
@@ -110,7 +110,7 @@ def verify_reset_token(email: str, token: str) -> bool:
         if response_email != email:
             return False
 
-        if expiration < datetime.utcnow().timestamp():
+        if expiration < datetime.now(tz=datetime.timezone.utc).timestamp():
             return False
 
         return True
