@@ -10,7 +10,7 @@ from app.core.dependency import (
     admin_role_check,
     validate_and_convert_enum_value,
 )
-from app.core.security import get_current_user, get_token_data
+from app.core.security import get_token_data
 from app.db.crud.crud_task import task_crud
 from app.db.database import get_db
 from app.model.base_model import Category, User

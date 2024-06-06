@@ -15,7 +15,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         return result.scalars().first()
 
     async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
-        create_data = obj_in.dict()
+        create_data = dict(obj_in)
         create_data.pop("password")
         db_obj = User(**create_data)
         db_obj.password = async_hash_password(obj_in.password)
@@ -34,7 +34,7 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
-            update_data = obj_in.dict(exclude_unset=True)
+            update_data = dict(obj_in)
 
         return await super().update(db, db_obj=db_obj, obj_in=update_data)
 

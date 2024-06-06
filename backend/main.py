@@ -22,15 +22,15 @@ app.add_middleware(cors_middleware)
 app.add_middleware(LogExceptionsMiddleware)
 
 
-@app.on_event("startup")
-async def startup_event():
-    await create_all_tables()
-
-
 @app.get("/")
 def root():
     logger.info("Root endpoint called")
     return "To-Do is working"
+
+
+class Startup:
+    async def on_startup(self):
+        await create_all_tables
 
 
 app.include_router(v1_routers, prefix="/api/v1")
