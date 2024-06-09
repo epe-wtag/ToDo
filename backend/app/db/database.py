@@ -9,9 +9,7 @@ DB_URL = os.environ.get("DB_URL")
 
 
 if DB_URL:
-    URL_DATABASE = (
-        f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:5432/{settings.DB_DATABASE}"
-    )
+    URL_DATABASE = f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:5432/{settings.DB_DATABASE}"
 else:
     URL_DATABASE = f"postgresql+asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST_LOCAL}:5432/{settings.DB_DATABASE}"
 
