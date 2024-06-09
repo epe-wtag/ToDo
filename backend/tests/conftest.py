@@ -13,13 +13,11 @@ SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Create all tables in the database before testing
 Base.metadata.create_all(bind=engine)
 
 @pytest.fixture(scope="session", autouse=True)
 def test_db():
     yield
-    # Drop all tables after testing
     Base.metadata.drop_all(bind=engine)
 
 
@@ -52,8 +50,19 @@ def mock_create_access_token():
         yield mock
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def mock_jwt_decode():
     with patch("app.core.security.jwt.decode") as mock_decode:
         mock_decode.return_value = {"user_id": 1, "role": "admin"}
         yield mock_decode
+
+
+@pytest.fixture(autouse=True)
+def mock_send_verification_email():
+    with patch("app.api.v1.endpoints.auth.send_verification_email") as mock:
+        yield mock
+        
+@pytest.fixture(autouse=True)
+def mock_send_reset_email():
+    with patch("app.api.v1.endpoints.auth.send_reset_email") as mock:
+        yield mock
