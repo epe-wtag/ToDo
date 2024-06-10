@@ -9,10 +9,11 @@ from main import app
 
 client = TestClient(app)
 
+
 def test_create_user():
     payload = {
-        "username": "testuser3",
-        "email": "test3@example.com",
+        "username": "testuser5",
+        "email": "test5@example.com",
         "password": "password123",
         "role": "user",
         "first_name": "John",
@@ -153,8 +154,3 @@ def test_forget_password_user_not_found():
         mock_generate_token.return_value = "token"
         response = client.post("/api/v1/auth/forget-password", data={"email": email})
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-        
-        
-
-        
-        

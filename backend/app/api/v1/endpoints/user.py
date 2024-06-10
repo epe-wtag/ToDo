@@ -34,20 +34,27 @@ async def get_user(
     user = await user_crud.get(db, id)
     try:
         if user:
-            if id==int(token_data.id) or token_data.role=='admin':
+            if id == int(token_data.id) or token_data.role == 'admin':
                 log.success(f"{SystemMessages.SUCCESS_USER_FETCHED} : {id}")
                 return user
             else:
-                raise ValueError("Unauthorized attempt")
-    except ValueError:
+                print("Permission denied")
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=SystemMessages.ERROR_PERMISSION_DENIED,
+                )
+        else:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=SystemMessages.ERROR_PERMISSION_DENIED,
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
-    except Exception:
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        log.error(f"Unhandled exception: {e}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=SystemMessages.ERROR_INTERNAL_SERVER,
         )
 
 
