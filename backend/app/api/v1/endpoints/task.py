@@ -36,27 +36,34 @@ async def create_task(
     status: bool = Form(False),
     due_date: str = Form(...),
     category: str = Form(...),
-    completed_at: str = Form(None),
+    completed_at: Optional[str] = Form(None),
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
     try:
+        print("Received request data:", title, description, status, due_date, category, completed_at)
+
         task_data = TaskCreate(
             title=title,
             description=description,
             status=status,
-            due_date=due_date,
+            due_date=datetime.fromisoformat(due_date),
             category=category,
-            completed_at=completed_at,
+            completed_at=datetime.fromisoformat(completed_at) if completed_at else None,
             owner_id=token_data.id,
         )
+        print("Task data:", task_data)
+
         db_task = await task_crud.create(db, obj_in=task_data)
+        print("Created task:", db_task)
+
         log.info(f"{SystemMessages.LOG_TASK_CREATED_SUCCESSFULLY} {db_task.id}")
         return db_task
     except Exception as e:
+        print("Error occurred:", e)
         log.error(f"{SystemMessages.ERROR_FAILED_TO_CREATE_TASK} {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"{SystemMessages.ERROR_FAILED_TO_CREATE_TASK} {str(e)}",
         )
 

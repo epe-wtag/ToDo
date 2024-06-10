@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
@@ -27,13 +27,13 @@ def hash_password(password: str) -> str:
 
 
 def create_access_token(data: dict, secret_key: str = settings.SECRET_KEY) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode = {**data, "exp": expire}
     return jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
 
 
 def generate_verification_token(email: str) -> str:
-    expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     payload = {"email": email, "exp": expiration_time}
     token = jwt.encode(payload, settings.VERIFICATION_KEY, algorithm=ALGORITHM)
     return token
@@ -80,7 +80,7 @@ def get_token_data(
 
 
 def generate_reset_token(email: str) -> str:
-    expiration_time = datetime.utcnow() + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
     payload = {"email": email, "exp": expiration_time}
     token = jwt.encode(payload, settings.RESET_PASSWORD_KEY, algorithm=ALGORITHM)
     return token
@@ -110,7 +110,7 @@ def verify_reset_token(email: str, token: str) -> bool:
         if response_email != email:
             return False
 
-        if expiration < datetime.utcnow().timestamp():
+        if expiration < datetime.now(timezone.utc).timestamp():
             return False
 
         return True
