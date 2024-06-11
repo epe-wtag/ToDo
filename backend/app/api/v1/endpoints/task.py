@@ -207,9 +207,8 @@ async def read_task(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
-        user = await db.get(User, task.owner_id)
         log.info(f"{SystemMessages.LOG_FETCH_TASK_SUCCESS.format(task_id=task_id)}")
-        return {"task": task, "user": user}
+        return task
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASK} {e}")
         raise HTTPException(
@@ -237,30 +236,30 @@ async def update_task(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
-
-        if int(token_data.id)==db_task.owner_id or token_data.role=='admin':
-            category_enum = validate_and_convert_enum_value(category, Category)
-            task_data = {
-                "title": title,
-                "description": description,
-                "due_date": due_date,
-                "category": category_enum,
-                "owner_id": owner_id,
-            }
-
-            updated_task = await task_crud.update(
-                db=db,
-                db_obj=db_task,
-                obj_in=task_data,
-            )
-            log.info(f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
-            return updated_task
-        
         else:
-            raise ValueError("Unauthorized attempt")
+            if int(token_data.id)==int(db_task.owner_id) or token_data.role=='admin':
+                category_enum = validate_and_convert_enum_value(category, Category)
+                task_data = {
+                    "title": title,
+                    "description": description,
+                    "due_date": due_date,
+                    "category": category_enum,
+                    "owner_id": owner_id,
+                }
+
+                updated_task = await task_crud.update(
+                    db=db,
+                    db_obj=db_task,
+                    obj_in=task_data,
+                )
+                log.info(f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
+                return updated_task
+            
+            else:
+                raise ValueError("Unauthorized attempt")
         
     except ValueError:
-        log.warning(f"Unauthorized attempt to update instance with id: {id}")
+        log.warning(f"Unauthorized attempt to update instance with id: {token_data.id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="You do not have permission to update this resource"
@@ -293,17 +292,18 @@ async def update_task_status(
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        if int(token_data.id)==db_task.owner_id or token_data.role=='admin':
+        if int(token_data.id)==int(db_task.owner_id) or token_data.role=='admin':
             updated_task = await task_crud.update(
                 db, db_obj=db_task, obj_in={"status": status}
             )
+            print('\n\n\n update: ', updated_task)
             log.info(f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
             return updated_task
         else:
             raise ValueError("Unauthorized attempt")
         
     except ValueError:
-        log.warning(f"Unauthorized attempt to update instance with id: {id}")
+        log.warning(f"Unauthorized attempt to update instance with id: {token_data.id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="You do not have permission to update this resource"
@@ -328,17 +328,19 @@ async def delete_task(
     log.info(f"{SystemMessages.LOG_DELETING_TASK.format(task_id=task_id)}")
     try:
         if token_data.role=='admin':
-            await task_crud.remove(db, id=task_id)
+            
+            await task_crud.remove(db, id=int(task_id))
+            
             return {"message": f"Task deleted successfully by {token_data.id}"}
-        else:
-            raise ValueError("You are not allowed to update this resource")
-    except ValueError as e:
-        log.warning(
-            f"Unauthorized update attempt for instance id {task_id} by this user"
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN, detail=str(e)
-        )
+    #     else:
+    #         raise ValueError("You are not allowed to update this resource")
+    # except ValueError as e:
+    #     log.warning(
+    #         f"Unauthorized update attempt for instance id {task_id} by this user"
+    #     )
+    #     raise HTTPException(
+    #         status_code=status.HTTP_403_FORBIDDEN, detail=str(e)
+    #     )
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_DELETE_TASK} {e}")
         raise HTTPException(
