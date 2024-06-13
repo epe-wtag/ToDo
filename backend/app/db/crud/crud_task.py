@@ -14,11 +14,11 @@ from logger import log
 class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
     async def get_by_owner(self, db: AsyncSession, *, owner_id: int) -> List[Task]:
         result = await db.execute(select(Task).filter(Task.owner_id == owner_id))
-        return result.scalars().all()
+        return [Task(**row) for row in await result.fetchall()]
 
-    async def get_by_id(self, db: AsyncSession, *, id: int) -> Optional[Task]:
-        result = await db.execute(select(Task).filter(Task.id == id))
-        return result.scalars().first()
+    async def get_by_id(self, db: AsyncSession, *, id: int) -> Task:
+        result = await db.execute(select(Task).where(Task.id == id))
+        return Task(**(await result.fetchone()))
 
     async def get_multi_with_query(
         self,
@@ -35,13 +35,11 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         if query:
             base_query = base_query.filter(Task.title.ilike(f"%{query}%"))
 
-        total = await db.scalar(
-                select(func.count()).select_from(base_query.subquery())
-            )
+        total = await db.scalar(select(func.count()).select_from(base_query.subquery()))
         result = await db.execute(
             base_query.order_by(desc(Task.id)).offset(skip).limit(limit)
         )
-        tasks = result.scalars().all()
+        tasks = [Task(**row) for row in await result.fetchall()]
         return tasks, total
 
     async def create(self, db: AsyncSession, *, obj_in: TaskCreate) -> Task:
@@ -74,7 +72,9 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
             select(func.count(Task.id)).filter(base_query.whereclause)
         )
         result = await db.execute(base_query.offset(skip).limit(limit))
-        return result.scalars().all(), total
+
+        tasks = [Task(**row) for row in await result.fetchall()]
+        return tasks, total
 
     async def remove(self, db: AsyncSession, *, id: int) -> Task:
         obj = await self.get(db, id)
@@ -106,8 +106,10 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         total = await db.scalar(
             select(func.count(Task.id)).filter(base_query.whereclause)
         )
-        result = await db.execute(base_query.offset(skip).limit(limit))
-        return result.scalars().all(), total
+        paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
+        result = await db.execute(paginated_query)
+        tasks = [Task(**row) for row in await result.fetchall()]
+        return tasks, total
 
     async def filter_tasks(
         self,
@@ -164,7 +166,7 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
             log.info(f"Pagination: offset={skip}, limit={limit}")
 
             result = await db.execute(paginated_query)
-            tasks = result.scalars().all()
+            tasks = [Task(**row) for row in await result.fetchall()]
 
             log.info(f"Filtered {len(tasks)} tasks")
             return tasks, total

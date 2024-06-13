@@ -3,13 +3,13 @@ from typing import Type
 
 from fastapi import Depends, HTTPException, status
 
-from app.core.security import get_current_user_role
+from app.core.security import get_token_data
 from app.model.base_model import User
 from logger import log
 
 
-def admin_role_check(user_role: str = Depends(get_current_user_role)):
-    if user_role != "admin":
+def admin_role_check(user_role: str = Depends(get_token_data)):
+    if user_role.role != "admin":
         return False
     else:
         return True

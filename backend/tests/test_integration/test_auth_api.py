@@ -1,12 +1,12 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
+from httpx import AsyncClient
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import status
 from app.core.constants import SystemMessages
-from app.core.security import create_access_token
+from app.core.security import create_access_token, generate_reset_token
 from app.model.base_model import User
-from app.schema.auth_schema import TokenData
 from app.util.hash import async_hash_password
 from main import app
 
@@ -19,8 +19,8 @@ def get_db():
 
 # def test_create_user():
 #     payload = {
-#         "username": "testuser6",
-#         "email": "test6@example.com",
+#         "username": "testuser10",
+#         "email": "test10@example.com",
 #         "password": "password123",
 #         "role": "user",
 #         "first_name": "John",
@@ -131,6 +131,7 @@ def test_logout():
 
 def test_forget_password():
     email = "test@example.com"
+    token = generate_reset_token(email)
 
     async def mock_get_by_email(db: AsyncSession, email: str):
         return User(
@@ -144,7 +145,7 @@ def test_forget_password():
     with patch(
         "app.db.crud.crud_auth.user_crud.get_by_email", new=mock_get_by_email
     ), patch("app.core.security.generate_reset_token") as mock_generate_token:
-        mock_generate_token.return_value = "token"
+        mock_generate_token.return_value = token
         response = client.post("/api/v1/auth/forget-password", data={"email": email})
         assert response.status_code == status.HTTP_200_OK
 
@@ -163,3 +164,104 @@ def test_forget_password_user_not_found():
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 
+
+@pytest.mark.asyncio
+@patch("app.db.crud.crud_auth.user_crud.get", new_callable=AsyncMock)
+@patch("app.db.crud.crud_auth.user_crud.update", new_callable=AsyncMock)
+@patch("app.api.v1.endpoints.auth.verify_old_password", new_callable=AsyncMock)
+@patch("app.api.v1.endpoints.auth.check_user_active", new_callable=AsyncMock)
+async def test_change_password_success(mock_update, mock_get, mock_verify_old_password, mock_check_user_active):
+    user_id = 1
+    old_password = "1234"
+    new_password = "12345"
+    token_data = {"id": str(user_id), "role": "user"}
+    token = create_access_token(token_data)
+    
+    mock_user = User(
+        id=user_id,
+        email="test1@example.com",
+        is_active=True,
+        role="user"
+    )
+    mock_get.return_value = mock_user
+    mock_update.return_value = mock_user
+
+    mock_verify_old_password.return_value = True
+    mock_check_user_active.return_value = True
+
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        client.cookies.set("token", token)
+
+        response = await client.post(
+            "/api/v1/auth/change-password",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={"old_password": old_password, "new_password": new_password}
+        )
+        assert response.status_code == 200
+
+
+@pytest.mark.asyncio
+@patch("app.db.crud.crud_auth.user_crud.get", new_callable=AsyncMock)
+@patch("app.db.crud.crud_auth.user_crud.update", new_callable=AsyncMock)
+@patch("app.api.v1.endpoints.auth.check_user_active", new_callable=AsyncMock)
+async def test_change_password_failed(mock_update, mock_get, mock_check_user_active):
+    user_id = 1
+    old_password = "1234"
+    new_password = "12345"
+    token_data = {"id": str(user_id), "role": "user"}
+    token = create_access_token(token_data)
+    
+    mock_user = User(
+        id=user_id,
+        email="test1@example.com",
+        is_active=True,
+        role="user"
+    )
+    mock_get.return_value = mock_user
+    mock_update.return_value = mock_user
+
+    mock_check_user_active.return_value = True
+
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        client.cookies.set("token", token)
+
+        response = await client.post(
+            "/api/v1/auth/change-password",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={"old_password": old_password, "new_password": new_password}
+        )
+        assert response.status_code == 500
+
+
+@pytest.mark.asyncio
+@patch("app.db.crud.crud_auth.user_crud.get", new_callable=AsyncMock)
+@patch("app.db.crud.crud_auth.user_crud.update", new_callable=AsyncMock)
+@patch("app.api.v1.endpoints.auth.verify_old_password", new_callable=AsyncMock)
+@patch("app.api.v1.endpoints.auth.check_user_active", new_callable=AsyncMock)
+async def test_change_password_unauthorized(mock_update, mock_get, mock_verify_old_password, mock_check_user_active):
+    user_id = 1
+    old_password = "1234"
+    new_password = "12345"
+    token = None
+    
+    mock_user = User(
+        id=user_id,
+        email="test1@example.com",
+        is_active=True,
+        role="user"
+    )
+    mock_get.return_value = mock_user
+    mock_update.return_value = mock_user
+
+    mock_verify_old_password.return_value = True
+    mock_check_user_active.return_value = True
+
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        client.cookies.set("token", token)
+
+        response = await client.post(
+            "/api/v1/auth/change-password",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            data={"old_password": old_password, "new_password": new_password}
+        )
+        assert response.status_code == 401

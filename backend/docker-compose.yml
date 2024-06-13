@@ -15,7 +15,7 @@ services:
       - ./logs:/logs
 
   database:
-    image: postgres
+    image: postgres:15.6
     ports:
       - "5435:5432"
     environment:

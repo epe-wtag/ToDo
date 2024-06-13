@@ -18,7 +18,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     async def get(self, db: AsyncSession, id: Any) -> Optional[ModelType]:
         result = await db.execute(select(self.model).filter(self.model.id == id))
-        return result.scalars().first()
+        return result.fetchall
 
     async def get_multi(
         self, db: AsyncSession, *, skip: int = 0, limit: int = 5000
