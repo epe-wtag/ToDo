@@ -124,6 +124,3 @@ def verify_reset_token(email: str, token: str) -> bool:
 def get_current_user(token_data: TokenData = Depends(get_token_data)) -> str:
     return token_data.id
 
-
-def get_current_user_role(token_data: TokenData = Depends(get_token_data)) -> str:
-    return token_data.role
