@@ -38,7 +38,6 @@ async def get_user(
                 log.success(f"{SystemMessages.SUCCESS_USER_FETCHED} : {id}")
                 return user
             else:
-                print("Permission denied")
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=SystemMessages.ERROR_PERMISSION_DENIED,

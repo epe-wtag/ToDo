@@ -14,11 +14,15 @@ from logger import log
 class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
     async def get_by_owner(self, db: AsyncSession, *, owner_id: int) -> List[Task]:
         result = await db.execute(select(Task).filter(Task.owner_id == owner_id))
-        return [Task(**row) for row in await result.fetchall()]
+        rows = result.fetchall()
+        tasks = [row[0] for row in rows]
+        return tasks
 
     async def get_by_id(self, db: AsyncSession, *, id: int) -> Task:
         result = await db.execute(select(Task).where(Task.id == id))
-        return Task(**(await result.fetchone()))
+        rows = result.fetchall()
+        task = [row[0] for row in rows][0]
+        return task
 
     async def get_multi_with_query(
         self,
@@ -39,7 +43,8 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         result = await db.execute(
             base_query.order_by(desc(Task.id)).offset(skip).limit(limit)
         )
-        tasks = [Task(**row) for row in await result.fetchall()]
+        rows = result.fetchall()
+        tasks = [row[0] for row in rows]
         return tasks, total
 
     async def create(self, db: AsyncSession, *, obj_in: TaskCreate) -> Task:
@@ -73,7 +78,8 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         )
         result = await db.execute(base_query.offset(skip).limit(limit))
 
-        tasks = [Task(**row) for row in await result.fetchall()]
+        rows = result.fetchall()
+        tasks = [row[0] for row in rows]
         return tasks, total
 
     async def remove(self, db: AsyncSession, *, id: int) -> Task:
@@ -108,7 +114,8 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         )
         paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
         result = await db.execute(paginated_query)
-        tasks = [Task(**row) for row in await result.fetchall()]
+        rows = result.fetchall()
+        tasks = [row[0] for row in rows]
         return tasks, total
 
     async def filter_tasks(
@@ -166,7 +173,8 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
             log.info(f"Pagination: offset={skip}, limit={limit}")
 
             result = await db.execute(paginated_query)
-            tasks = [Task(**row) for row in await result.fetchall()]
+            rows = result.fetchall()
+            tasks = [row[0] for row in rows]
 
             log.info(f"Filtered {len(tasks)} tasks")
             return tasks, total

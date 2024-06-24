@@ -59,9 +59,6 @@ async def test_get_user_success(get_db):
         with patch("app.core.security.get_token_data", return_value=mock_token_data):
             response = client.get(f"/api/v1/user/user/{user_id}")
 
-    print(f"Response status code: {response.status_code}")
-    print(f"Response JSON: {response.json()}")
-
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["id"] == user_id
 
@@ -82,9 +79,6 @@ async def test_get_user_not_found(get_db):
     with patch("app.db.crud.crud_auth.user_crud.get", new=mock_get):
         with patch("app.core.security.get_token_data", return_value=mock_token_data):
             response = client.get(f"/api/v1/user/user/{user_id}")
-
-    print(f"Response status code: {response.status_code}")
-    print(f"Response text: {response.text}")
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
 
@@ -114,9 +108,6 @@ async def test_get_user_unauthorized(get_db):
     with patch("app.db.crud.crud_auth.user_crud.get", new=mock_get):
         with patch("app.core.security.get_token_data", return_value=mock_token_data):
             response = client.get(f"/api/v1/user/user/{user_id}")
-
-    print(f"Response status code: {response.status_code}")
-    print(f"Response text: {response.text}")
 
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
 

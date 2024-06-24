@@ -163,7 +163,6 @@ def test_read_tasks_unauthorized():
         "app.db.crud.crud_task.task_crud.get_multi_with_query", return_value=([], 0)
     ), patch("app.db.database.get_db", new=get_db):
         response = client.get("/api/v1/task/tasks/")
-        print("\n\n\n response: ", response)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
 
