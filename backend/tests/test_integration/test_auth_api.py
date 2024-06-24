@@ -98,7 +98,6 @@ def test_login_user_inactive():
         response = client.post(
             "/api/v1/auth/login", data={"email": email, "password": password}
         )
-        print(response)
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
 
 

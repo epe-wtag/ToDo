@@ -1,15 +1,14 @@
 from enum import Enum
 from typing import Type
 
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status
 
-from app.core.security import get_token_data
 from app.model.base_model import User
 from logger import log
 
 
-def admin_role_check(user_role: str = Depends(get_token_data)):
-    if user_role.role != "admin":
+def admin_role_check(user_role: str):
+    if user_role != "admin":
         return False
     else:
         return True

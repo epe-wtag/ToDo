@@ -41,8 +41,6 @@ async def create_task(
     token_data: TokenData = Depends(get_token_data),
 ):
     try:
-        print("Received request data:", title, description, status, due_date, category, completed_at)
-
         task_data = TaskCreate(
             title=title,
             description=description,
@@ -52,15 +50,12 @@ async def create_task(
             completed_at=datetime.fromisoformat(completed_at) if completed_at else None,
             owner_id=token_data.id,
         )
-        print("Task data:", task_data)
 
         db_task = await task_crud.create(db, obj_in=task_data)
-        print("Created task:", db_task)
 
         log.info(f"{SystemMessages.LOG_TASK_CREATED_SUCCESSFULLY} {db_task.id}")
         return db_task
     except Exception as e:
-        print("Error occurred:", e)
         log.error(f"{SystemMessages.ERROR_FAILED_TO_CREATE_TASK} {e}")
         raise HTTPException(
             status_code=500,
@@ -76,7 +71,9 @@ async def read_tasks(
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_ATTEMPT_FETCH_TASKS.format(query=query, skip=skip, limit=limit)}")
+    log.info(
+        f"{SystemMessages.LOG_ATTEMPT_FETCH_TASKS.format(query=query, skip=skip, limit=limit)}"
+    )
     try:
         admin = token_data.role == "admin"
         tasks, total = await task_crud.get_multi_with_query(
@@ -110,10 +107,11 @@ async def read_delete_request_tasks(
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_FETCH_DELETE_REQUEST_TASKS.format(skip=skip, limit=limit)}")
+    log.info(
+        f"{SystemMessages.LOG_FETCH_DELETE_REQUEST_TASKS.format(skip=skip, limit=limit)}"
+    )
     try:
-        admin = admin_role_check(token_data.role)
-        if admin:
+        if token_data.role == "admin":
             tasks, total = await task_crud.get_delete_requested_tasks(
                 db, skip=skip, limit=limit
             )
@@ -136,11 +134,15 @@ async def search_tasks(
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_FETCH_SEARCH_TASKS.format(query=query, skip=skip, limit=limit)}")
+    log.info(
+        f"{SystemMessages.LOG_FETCH_SEARCH_TASKS.format(query=query, skip=skip, limit=limit)}"
+    )
     try:
         admin = admin_role_check(token_data.role)
 
-        tasks, total = await task_crud.search(db, query, token_data.id, admin, skip, limit)
+        tasks, total = await task_crud.search(
+            db, query, token_data.id, admin, skip, limit
+        )
 
         log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
         return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
@@ -164,6 +166,7 @@ async def filter_tasks(
 ):
     try:
         admin = admin_role_check(token_data.role)
+        
 
         log.info(
             f"{SystemMessages.LOG_FETCH_FILTER_TASKS.format(task_status=task_status, category=category, due_date=due_date, skip=skip, limit=limit, user_id=token_data.id, user_role=token_data.role)}"
@@ -203,7 +206,9 @@ async def read_task(
     try:
         task = await task_crud.get_by_id(db=db, id=task_id)
         if not task:
-            log.warning(f"{SystemMessages.WARNING_TASK_NOT_FOUND.format(task_id=task_id)}")
+            log.warning(
+                f"{SystemMessages.WARNING_TASK_NOT_FOUND.format(task_id=task_id)}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
@@ -232,12 +237,17 @@ async def update_task(
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
         if not db_task:
-            log.warning(f"{SystemMessages.WARNING_TASK_NOT_FOUND.format(task_id=task_id)}")
+            log.warning(
+                f"{SystemMessages.WARNING_TASK_NOT_FOUND.format(task_id=task_id)}"
+            )
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
         else:
-            if int(token_data.id)==int(db_task.owner_id) or token_data.role=='admin':
+            if (
+                int(token_data.id) == int(db_task.owner_id)
+                or token_data.role == "admin"
+            ):
                 category_enum = validate_and_convert_enum_value(category, Category)
                 task_data = {
                     "title": title,
@@ -252,19 +262,21 @@ async def update_task(
                     db_obj=db_task,
                     obj_in=task_data,
                 )
-                log.info(f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
+                log.info(
+                    f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}"
+                )
                 return updated_task
-            
+
             else:
                 raise ValueError("Unauthorized attempt")
-        
+
     except ValueError:
         log.warning(f"Unauthorized attempt to update instance with id: {token_data.id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You do not have permission to update this resource"
+            detail="You do not have permission to update this resource",
         )
-            
+
     except SQLAlchemyError as e:
         log.error(f"Database error: {e}")
         raise HTTPException(
@@ -288,27 +300,30 @@ async def update_task_status(
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_UPDATE_TASK_STATUS.format(task_id=task_id, status=status)}")
+    log.info(
+        f"{SystemMessages.LOG_UPDATE_TASK_STATUS.format(task_id=task_id, status=status)}"
+    )
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        if int(token_data.id)==int(db_task.owner_id) or token_data.role=='admin':
+        if int(token_data.id) == int(db_task.owner_id) or token_data.role == "admin":
             updated_task = await task_crud.update(
                 db, db_obj=db_task, obj_in={"status": status}
             )
-            print('\n\n\n update: ', updated_task)
-            log.info(f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
+            log.info(
+                f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}"
+            )
             return updated_task
         else:
             raise ValueError("Unauthorized attempt")
-        
+
     except ValueError:
         log.warning(f"Unauthorized attempt to update instance with id: {token_data.id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You do not have permission to update this resource"
+            detail="You do not have permission to update this resource",
         )
-            
+
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK_STATUS} {e}")
         raise HTTPException(
@@ -327,20 +342,17 @@ async def delete_task(
 ):
     log.info(f"{SystemMessages.LOG_DELETING_TASK.format(task_id=task_id)}")
     try:
-        if token_data.role=='admin':
-            
+        if token_data.role == "admin":
             await task_crud.remove(db, id=int(task_id))
-            
+
             return {"message": f"Task deleted successfully by {token_data.id}"}
-    #     else:
-    #         raise ValueError("You are not allowed to update this resource")
-    # except ValueError as e:
-    #     log.warning(
-    #         f"Unauthorized update attempt for instance id {task_id} by this user"
-    #     )
-    #     raise HTTPException(
-    #         status_code=status.HTTP_403_FORBIDDEN, detail=str(e)
-    #     )
+        else:
+            raise ValueError("You are not allowed to update this resource")
+    except ValueError as e:
+        log.warning(
+            f"Unauthorized update attempt for instance id {task_id} by this user"
+        )
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_DELETE_TASK} {e}")
         raise HTTPException(
@@ -363,20 +375,22 @@ async def request_delete_task(
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        if int(token_data.id)==db_task.owner_id or token_data.role=='admin':
+        if int(token_data.id) == db_task.owner_id or token_data.role == "admin":
             updated_task = await task_crud.update(
                 db, db_obj=db_task, obj_in={"delete_request": True}
             )
-            log.info(f"{SystemMessages.LOG_TASK_DELETE_REQUEST_SUCCESS.format(task_id=task_id)}")
+            log.info(
+                f"{SystemMessages.LOG_TASK_DELETE_REQUEST_SUCCESS.format(task_id=task_id)}"
+            )
             return updated_task
         else:
             raise ValueError("Unauthorized attempt")
-        
+
     except ValueError:
         log.warning(f"Unauthorized attempt to update instance with id: {id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You do not have permission to update this resource"
+            detail="You do not have permission to update this resource",
         )
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_REQUEST_DELETE_TASK} {e}")
@@ -384,4 +398,3 @@ async def request_delete_task(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_REQUEST_DELETE_TASK} {str(e)}",
         )
- 
