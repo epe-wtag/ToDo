@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
@@ -72,10 +72,7 @@ async def get_user(
 )
 async def update_user(
     id: int,
-    username: str = Form(None),
-    first_name: str = Form(None),
-    last_name: str = Form(None),
-    contact_number: str = Form(None),
+    input: UserUpdate,
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
@@ -90,15 +87,8 @@ async def update_user(
             )
 
         if id == int(token_data.id) or token_data.role=='admin':
-            user_update_data = {
-                "username": username,
-                "first_name": first_name,
-                "last_name": last_name,
-                "contact_number": contact_number,
-            }
-            user_update = UserUpdate(
-                **{k: v for k, v in user_update_data.items() if v is not None}
-            )
+            
+            user_update = input
             updated_user = await user_crud.update(db, db_obj=user, obj_in=user_update)
             log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")
             return updated_user

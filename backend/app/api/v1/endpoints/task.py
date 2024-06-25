@@ -13,9 +13,9 @@ from app.core.dependency import (
 from app.core.security import get_token_data
 from app.db.crud.crud_task import task_crud
 from app.db.database import get_db
-from app.model.base_model import Category, User
+from app.model.base_model import Category
 from app.schema.auth_schema import TokenData
-from app.schema.task_schema import Message, TaskCreate, TaskInDB, TaskList
+from app.schema.task_schema import Message, TaskBase, TaskCreate, TaskInDB, TaskList
 from logger import log
 
 router = APIRouter(
@@ -31,23 +31,18 @@ router = APIRouter(
     description="Create a new task",
 )
 async def create_task(
-    title: str = Form(...),
-    description: str = Form(...),
-    status: bool = Form(False),
-    due_date: str = Form(...),
-    category: str = Form(...),
-    completed_at: Optional[str] = Form(None),
+    input: TaskBase,
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
     try:
         task_data = TaskCreate(
-            title=title,
-            description=description,
-            status=status,
-            due_date=datetime.fromisoformat(due_date),
-            category=category,
-            completed_at=datetime.fromisoformat(completed_at) if completed_at else None,
+            title=input.title,
+            description=input.description,
+            status=input.status,
+            due_date=datetime.fromisoformat(str(input.due_date)) if input.due_date else None,
+            category=input.category,
+            completed_at=datetime.fromisoformat(str(input.completed_at)) if input.completed_at else None,
             owner_id=token_data.id,
         )
 

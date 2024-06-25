@@ -31,21 +31,25 @@ const ResetPassword = () => {
         return;
     }
 
-    let formData = new FormData();
-    formData.append('email', email);
-    formData.append('password', password);
-    formData.append('token', token);
+    const data = {
+      email: email,
+      password: password,
+      token: token
+  };
 
     let requestOption = {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
         redirect: 'follow',
         credentials: "include", 
     }
 
     try {
         const response = await fetch('/api/v1/auth/reset-password/', requestOption);
-        // const responseData = await response.text();
+        
         console.log('success !!!');
         Swal.fire({
             icon: 'success',

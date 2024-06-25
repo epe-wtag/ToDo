@@ -27,6 +27,7 @@ class UserUpdate(BaseModel):
     first_name: Optional[str]
     last_name: Optional[str]
     contact_number: Optional[str]
+    
 
 
 class UserInResponse(UserBase):
@@ -50,5 +51,39 @@ class TokenData(BaseModel):
     role: Optional[str] = None
 
 
-class Message(BaseModel):
+class LogInMessage(BaseModel):
+    message: str
+
+
+class LogOutMessage(BaseModel):
+    message: str
+    
+class ForgetPasswordMessage(BaseModel):
+    message: str
+    
+    
+class ResetPasswordMessage(BaseModel):
+    message: str
+    
+    
+class VerifyMessage(BaseModel):
+    message: str
+    
+    
+class UserPassReset(BaseModel):
+    email: EmailStr
+    password: str
+    token: str
+    
+
+class UserChangePassword(BaseModel):
+    old_password: str
+    new_password: str
+    
+    
+class ForgetPassword(BaseModel):
+    email: EmailStr
+    
+    
+class PasswordChangeMessage(BaseModel):
     message: str

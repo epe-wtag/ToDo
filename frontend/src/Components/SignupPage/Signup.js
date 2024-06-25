@@ -17,6 +17,16 @@ const Signup = () => {
     const [gender, setGender] = useState('');
     const [currentStep, setCurrentStep] = useState(1);
 
+    const isValidBangladeshiPhoneNumber = (phoneNumber) => {
+        const regex = /^(?:\+?88|0088)?01[3-9]\d{8}$/;
+        return regex.test(phoneNumber);
+    };
+
+    const isValidEmail = (email) => {
+        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return regex.test(email);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const errors = {};
@@ -29,27 +39,65 @@ const Signup = () => {
                 return;
             }
 
-            let formData = new FormData();
-            formData.append('email', email);
-            formData.append('password', password);
-            formData.append('role', 'user');
-            formData.append('username', userName);
-            formData.append('first_name', firstName);
-            formData.append('last_name', lastName);
-            formData.append('contact_number', contactNumber);
-            formData.append('gender', gender);
+            if (!isValidEmail(email)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Email',
+                    text: 'Please enter a valid email address',
+                });
+                return;
+            }
+
+            if (!isValidBangladeshiPhoneNumber(contactNumber)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Phone Number',
+                    text: 'Please enter a valid Bangladeshi phone number',
+                });
+                return;
+            }
+
+            const data = {
+                email: email,
+                password: password,
+                role: 'user',
+                username: userName,
+                first_name: firstName,
+                last_name: lastName,
+                contact_number: contactNumber,
+                gender: gender,
+            };
 
             let requestOption = {
                 method: 'POST',
-                body: formData,
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
                 redirect: 'follow'
-            }
+            };
 
 
             try {
                 const response = await fetch('/api/v1/auth/create-user/', requestOption);
-                const responseData = await response.text();
-                const jsonResponse = JSON.parse(responseData);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    let errorMessage = '';
+
+                    if (errorData.detail) {
+                        if (Array.isArray(errorData.detail)) {
+                            errorMessage = errorData.detail.map(detail => detail.msg).join(' ');
+                        } else {
+                            errorMessage = errorData.detail;
+                        }
+                    } else {
+                        errorMessage = 'An unknown error occurred';
+                    }
+
+                    throw new Error(errorMessage);
+                }
+
+                const jsonResponse = await response.json();
                 console.log('success', jsonResponse);
                 Swal.fire({
                     icon: 'success',
@@ -60,6 +108,12 @@ const Signup = () => {
                 navigate('/login');
             } catch (error) {
                 console.log('Error: ', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    text: error.message || 'Something went wrong!',
+                });
+
             }
 
 
@@ -71,7 +125,6 @@ const Signup = () => {
             <img src={gif_img} alt='ecom' height="200px" width="380px" className='imageClass' />
             <h3>SignUp Here</h3>
             <form onSubmit={handleSubmit} className="create-user-form">
-                {currentStep === 1 && (
                     <>
                         <input
                             className="user-create-input"
@@ -89,11 +142,9 @@ const Signup = () => {
                             placeholder="Password"
                             required
                         />
-
-                        <button type="submit">Next</button>
+                        
                     </>
-                )}
-                {currentStep === 2 && (
+                
                     <>
                         <input
                             className="user-create-input"
@@ -150,7 +201,6 @@ const Signup = () => {
                         </div>
                         <button type="submit">Create User</button>
                     </>
-                )}
             </form>
             <p>
                 Already have an account ? {" "}

@@ -42,13 +42,17 @@ const Login = () => {
             return;
         }
 
-        let formData = new FormData();
-        formData.append('email', email);
-        formData.append('password', password)
+        const data = {
+            email: email,
+            password: password
+        };
 
         let requestOption = {
             method: 'POST',
-            body: formData,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
             redirect: 'follow',
             credentials: "include", 
         }
@@ -56,10 +60,12 @@ const Login = () => {
 
         try {
             const response = await fetch('/api/v1/auth/login/', requestOption);
-            const responseData = await response.text();
-            const jsonResponse = JSON.parse(responseData);
-            console.log('success !!!');
-            
+            if (!response.ok) {
+                const errorResponse = await response.json();
+                throw new Error(errorResponse.detail);
+            }
+
+            const jsonResponse = await response.json();
             setId('id', jsonResponse.id);
             setIsAdmin('is_admin', jsonResponse.is_admin);
             Swal.fire({
@@ -71,8 +77,27 @@ const Login = () => {
             navigate('/home');
         } catch (error) {
             console.log('Error: ', error);
+
+            let errorMessage = 'Something went wrong!';
+
+            if (error.message === 'Invalid email or password') {
+                errorMessage = 'Invalid email or password';
+            } else if (error.message === 'User not found') {
+                errorMessage = 'User not found';
+            } else if (error.message === 'User is not active') {
+                errorMessage = 'User is not active';
+            } else {
+                errorMessage = error.message;
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Login Failed',
+                text: errorMessage,
+            });
         }
     };
+
 
     return (
         <div className="login-user-container">
