@@ -17,19 +17,13 @@ const Login = () => {
     const [id, setId] = useCookies(['id']);
     const [isAdmin, setIsAdmin] = useCookies(['is_admin']);
 
-    const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
     
         const errors = {};
-
-        if (!email.trim()) {
-            errors.email = "Email Address is required";
-        } else if (!/\S+@\S+\.\S+/.test(email)) {
-            errors.email = "Invalid email format";
-        }
 
         if (!password.trim()) {
             errors.password = "Password is required";
@@ -43,7 +37,7 @@ const Login = () => {
         }
 
         const data = {
-            email: email,
+            username: username,
             password: password
         };
 
@@ -80,8 +74,8 @@ const Login = () => {
 
             let errorMessage = 'Something went wrong!';
 
-            if (error.message === 'Invalid email or password') {
-                errorMessage = 'Invalid email or password';
+            if (error.message === 'Invalid username or password') {
+                errorMessage = 'Invalid username or password';
             } else if (error.message === 'User not found') {
                 errorMessage = 'User not found';
             } else if (error.message === 'User is not active') {
@@ -105,10 +99,10 @@ const Login = () => {
             <h2>Login Here</h2>
             <form onSubmit={handleSubmit} className="login-user-form">
                 <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
                 required
                 />
                 <input

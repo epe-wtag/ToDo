@@ -37,7 +37,7 @@ class UserInResponse(UserBase):
 
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    username: str
     password: str
 
 

@@ -20,6 +20,7 @@ const Profile = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [userData, setUserData] = useState({});
+  const [errors, setErrors] = useState({});
   const [newUserData, setNewUserData] = useState({
     username: '',
     first_name: '',
@@ -63,6 +64,19 @@ const Profile = () => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
+    const newErrors = {};
+    const phoneNumberPattern = /^(?:\+?88|0088)?01[3-9]\d{8}$/;
+
+    if (!phoneNumberPattern.test(newUserData.contact_number)) {
+      newErrors.contact_number = 'Contact number must be a valid Bangladeshi number';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+
 
     const data = {
       username: newUserData.username,
@@ -101,7 +115,11 @@ const Profile = () => {
         } else if (response.status === 401) {
           errorMessage = errorResponse.detail || 'Unauthorized attempt';
         } else if (response.status === 500) {
-          errorMessage = errorResponse.detail || 'Internal server error';
+          if (errorResponse.detail.includes('duplicate key value violates unique constraint "ix_users_username"')) {
+            errorMessage = 'Username already exists. Please choose a different username.';
+          } else {
+            errorMessage = errorResponse.detail || 'Internal server error';
+          }
         }
   
         Swal.fire({
@@ -226,6 +244,7 @@ const Profile = () => {
                   placeholder="Contact Number"
                 />
               </div>
+              {errors.contact_number && <div className="error">{errors.contact_number}</div>}
               <button type="submit">Save Changes</button>
             </form>
           </div>

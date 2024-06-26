@@ -25,6 +25,13 @@ services:
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
       - postgres_data1:/var/lib/postgresql/data
+  smtp-service:
+    image: axllent/mailpit
+    restart: unless-stopped
+    container_name: smtp
+    ports:
+      - "8025:8025"
+      - "1025:1025"
 
 volumes:
   postgres_data1:

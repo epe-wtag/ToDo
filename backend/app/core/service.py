@@ -12,12 +12,13 @@ conf = ConnectionConfig(
     MAIL_USERNAME=settings.MAIL_USERNAME,
     MAIL_PASSWORD=settings.MAIL_PASSWORD,
     MAIL_FROM=settings.MAIL_FROM,
-    MAIL_PORT=587,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=True,
+    MAIL_PORT=1025,
+    MAIL_SERVER="localhost",
+    MAIL_STARTTLS=False,
     MAIL_SSL_TLS=False,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True,
+    USE_CREDENTIALS=False,
+    VALIDATE_CERTS=False,
+    MAIL_DEBUG=True,
 )
 
 app = FastAPI()
@@ -37,7 +38,7 @@ def load_template(template_name: str, context: dict) -> str:
 
 
 async def simple_send(email: EmailStr, token: str) -> JSONResponse:
-    verify_url = "http://127.0.0.1:8000/api/v1/auth/verify"
+    verify_url = f"http://127.0.0.1:8000/api/v1/auth/verify?email={email}&token={token}"
     context = {"verify_url": verify_url, "email": email, "token": token}
     html = load_template("verification_email.html", context)
 
