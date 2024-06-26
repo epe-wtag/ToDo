@@ -63,17 +63,22 @@ const Profile = () => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
 
-    const formData = new FormData();
-    formData.append('username', newUserData.username);
-    formData.append('first_name', newUserData.first_name);
-    formData.append('last_name', newUserData.last_name);
-    formData.append('contact_number', newUserData.contact_number);
+
+    const data = {
+      username: newUserData.username,
+      first_name: newUserData.first_name,
+      last_name: newUserData.last_name,
+      contact_number: newUserData.contact_number
+    };
 
 
 
     let requestOption = {
       method: 'PUT',
-      body: formData,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
       redirect: 'follow',
       credentials: "include",
     }
@@ -83,15 +88,35 @@ const Profile = () => {
       if (response.ok) {
         Swal.fire({
           icon: 'success',
-          title: 'Successfully changed the password!',
+          title: 'Successfully updated the user details!',
           showConfirmButton: false,
           timer: 1500
         });
       } else {
-        console.error('Error updating product:', response.statusText);
+        const errorResponse = await response.json();
+        let errorMessage = 'Something went wrong!';
+        
+        if (response.status === 404) {
+          errorMessage = errorResponse.detail || 'User not found';
+        } else if (response.status === 401) {
+          errorMessage = errorResponse.detail || 'Unauthorized attempt';
+        } else if (response.status === 500) {
+          errorMessage = errorResponse.detail || 'Internal server error';
+        }
+  
+        Swal.fire({
+          icon: 'error',
+          title: 'Update Failed',
+          text: errorMessage,
+        });
       }
     } catch (error) {
-      console.error('Error updating product:', error);
+      console.error('Error updating user:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Update Failed',
+        text: 'An unexpected error occurred.',
+      });
     }
 
 

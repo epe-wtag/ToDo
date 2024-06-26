@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './ForgetPassword.css';
-import { Link, useNavigate } from 'react-router-dom'; 
-import Swal from 'sweetalert2'; 
+import { Link, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 
 const ForgetPassword = () => {
   const [email, setEmail] = useState('');
@@ -13,43 +13,63 @@ const ForgetPassword = () => {
     const errors = {};
 
     if (!email.trim()) {
-        errors.email = "Email Address is required";
+      errors.email = "Email Address is required";
     } else if (!/\S+@\S+\.\S+/.test(email)) {
-        errors.email = "Invalid email format";
+      errors.email = "Invalid email format";
     }
     if (Object.keys(errors).length > 0) {
-        console.log(errors);
-        return;
+      console.log(errors);
+      return;
     }
 
-    let formData = new FormData();
-        formData.append('email', email);
+    const data = {
+      email: email
+    };
 
     let requestOption = {
-        method: 'POST',
-        body: formData,
-        redirect: 'follow',
-        credentials: "include", 
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+      redirect: 'follow',
+      credentials: "include",
     }
 
     try {
-        const response = await fetch('/api/v1/auth/forget-password', requestOption);
-        // const responseData = await response.text();
-        // const cookie = response.headers.get('Set-Cookie');
-        // const jsonResponse = JSON.parse(responseData);
-        console.log('success !!!');
-        
-        Swal.fire({
-            icon: 'success',
-            title: 'Reset link has been sent to this email!',
-            showConfirmButton: false,
-            timer: 1500
-        });
-        navigate('/login');
-    } catch (error) {
-        console.log('Error: ', error);
-    }
+      const response = await fetch('/api/v1/auth/forget-password', requestOption);
+      if (!response.ok) {
+        const errorResponse = await response.json();
+        throw new Error(errorResponse.detail);
+      }
 
+      console.log('success !!!');
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Reset link has been sent to this email!',
+        showConfirmButton: false,
+        timer: 1500
+      });
+      navigate('/login');
+    } catch (error) {
+      console.log('Error: ', error);
+
+      let errorMessage = 'Something went wrong!';
+      if (error.message.includes('User not found')) {
+        errorMessage = 'User not found';
+      } else if (error.message.includes('Failed to send reset email')) {
+        errorMessage = 'Failed to send reset email';
+      } else {
+        errorMessage = error.message; 
+      }
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Operation Failed',
+        text: errorMessage,
+      });
+    }
   };
 
   return (

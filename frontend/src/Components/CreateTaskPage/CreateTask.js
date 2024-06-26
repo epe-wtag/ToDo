@@ -17,17 +17,22 @@ const CreateTask = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('description', description);
-        formData.append('due_date', dueDate);
-        formData.append('category', category);
+        const data = {
+            title: title,
+            description: description,
+            due_date: dueDate,
+            category: category
+          };
 
         try {
 
             let requestOption = {
                 method: 'POST',
-                body: formData,
+                headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(data),
+            
                 redirect: 'follow',
                 credentials: "include",
             }

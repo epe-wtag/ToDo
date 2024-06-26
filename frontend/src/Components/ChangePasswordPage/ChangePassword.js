@@ -41,20 +41,28 @@ const ChangePassword = () => {
             return;
         }
 
-        let formData = new FormData();
-        formData.append('old_password', oldPassword);
-        formData.append('new_password', newPassword);
+        const data = {
+            old_password: oldPassword,
+            new_password: newPassword
+        };
 
         let requestOption = {
             method: 'POST',
-            body: formData,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
             redirect: 'follow',
             credentials: "include",
         }
 
         try {
             const response = await fetch('/api/v1/auth/change-password/', requestOption);
-            console.log('success !!!');
+            if (!response.ok) {
+                const errorResponse = await response.json();
+                throw new Error(errorResponse.detail);
+            }
+
             Swal.fire({
                 icon: 'success',
                 title: 'Successfully changed the password!',
@@ -62,10 +70,27 @@ const ChangePassword = () => {
                 timer: 1500
             });
             removeId('id');
-            removeIsAdmin('is_admin')
+            removeIsAdmin('is_admin');
             navigate('/login');
         } catch (error) {
             console.log('Error: ', error);
+
+            let errorMessage = 'Something went wrong!';
+            if (error.message.includes('403')) {
+                errorMessage = 'Invalid old password';
+            } else if (error.message.includes('User is not active')) {
+                errorMessage = 'User is not active';
+            } else if (error.message.includes('Failed to change password')) {
+                errorMessage = 'Failed to change password';
+            } else {
+                errorMessage = error.message;
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Change Password Failed',
+                text: errorMessage,
+            });
         }
     };
 

@@ -24,7 +24,7 @@ services:
       - POSTGRES_PASSWORD=marmaidarmy
       - POSTGRES_HOST_AUTH_METHOD=trust
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data1:/var/lib/postgresql/data
 
 volumes:
-  postgres_data:
+  postgres_data1:

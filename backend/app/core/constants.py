@@ -83,6 +83,7 @@ class SystemMessages:
     LOG_TASK_STATUS_UPDATED_SUCCESSFULLY = (
         "Status of task with id {task_id} updated successfully"
     )
+    LOG_HTTP_EXCEPTION = "HTTP Exception occurred"
     LOG_DELETING_TASK = "Deleting task with id: {task_id}"
     LOG_TASK_DELETE_REQUEST = "Deleting task with id: {task_id}"
     LOG_TASK_DELETE_REQUEST_SUCCESS = "Task with id {task_id} delete requested successfully"
