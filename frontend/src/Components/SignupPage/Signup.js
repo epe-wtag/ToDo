@@ -5,6 +5,16 @@ import Swal from 'sweetalert2';
 
 import gif_img from '../../assets/images/hi_there.gif';
 
+
+const LoaderModal = () => (
+    <div className="modal">
+        <div className="modal-content">
+            <div className="loader"></div>
+            <p className="loader_text">Loading...</p>
+        </div>
+    </div>
+);
+
 const Signup = () => {
     let navigate = useNavigate();
 
@@ -16,6 +26,7 @@ const Signup = () => {
     const [contactNumber, setContactNumber] = useState('');
     const [gender, setGender] = useState('');
     const [currentStep, setCurrentStep] = useState(1);
+    const [isLoading, setIsLoading] = useState(false);
 
     const isValidBangladeshiPhoneNumber = (phoneNumber) => {
         const regex = /^(?:\+?88|0088)?01[3-9]\d{8}$/;
@@ -77,6 +88,7 @@ const Signup = () => {
                 redirect: 'follow'
             };
 
+            setIsLoading(true);
 
             try {
                 const response = await fetch('/api/v1/auth/create-user/', requestOption);
@@ -114,9 +126,9 @@ const Signup = () => {
                     text: error.message || 'Something went wrong!',
                 });
 
+            } finally {
+                setIsLoading(false);
             }
-
-
         }
     };
 
@@ -124,83 +136,82 @@ const Signup = () => {
         <div className="create-user-container">
             <img src={gif_img} alt='ecom' height="200px" width="380px" className='imageClass' />
             <h3>SignUp Here</h3>
+            {isLoading && <LoaderModal />}
             <form onSubmit={handleSubmit} className="create-user-form">
-                    <>
-                        <input
-                            className="user-create-input"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Email"
-                            required
-                        />
-                        <input
-                            className="user-create-input"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Password"
-                            required
-                        />
-                        
-                    </>
-                
-                    <>
-                        <input
-                            className="user-create-input"
-                            type="text"
-                            value={userName}
-                            onChange={(e) => setUserName(e.target.value)}
-                            placeholder="Username"
-                            required
-                        />
-                        <input
-                            className="user-create-input"
-                            type="text"
-                            value={firstName}
-                            onChange={(e) => setFirstName(e.target.value)}
-                            placeholder="First Name"
-                            required
-                        />
-                        <input
-                            className="user-create-input"
-                            type="text"
-                            value={lastName}
-                            onChange={(e) => setLastName(e.target.value)}
-                            placeholder="Last Name"
-                            required
-                        />
-                        <input
-                            className="user-create-input"
-                            type="tel"
-                            value={contactNumber}
-                            onChange={(e) => setContactNumber(e.target.value)}
-                            placeholder="Contact Number"
-                            required
-                        />
-                        <hr />
-                        <div>
-                            <label>
-                                <input
-                                    type="radio"
-                                    value="male"
-                                    checked={gender === 'male'}
-                                    onChange={() => setGender('male')}
-                                />
-                                Male
-                            </label>
-                            <label>
-                                <input
-                                    type="radio"
-                                    value="female"
-                                    checked={gender === 'female'}
-                                    onChange={() => setGender('female')}
-                                />
-                                Female
-                            </label>
-                        </div>
-                        <button type="submit">Create User</button>
-                    </>
+                <>
+                    <input
+                        className="user-create-input"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Email"
+                        required
+                    />
+                    <input
+                        className="user-create-input"
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Password"
+                        required
+                    />
+                </>
+                <>
+                    <input
+                        className="user-create-input"
+                        type="text"
+                        value={userName}
+                        onChange={(e) => setUserName(e.target.value)}
+                        placeholder="Username"
+                        required
+                    />
+                    <input
+                        className="user-create-input"
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="First Name"
+                        required
+                    />
+                    <input
+                        className="user-create-input"
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Last Name"
+                        required
+                    />
+                    <input
+                        className="user-create-input"
+                        type="tel"
+                        value={contactNumber}
+                        onChange={(e) => setContactNumber(e.target.value)}
+                        placeholder="Contact Number"
+                        required
+                    />
+                    <hr />
+                    <div>
+                        <label>
+                            <input
+                                type="radio"
+                                value="male"
+                                checked={gender === 'male'}
+                                onChange={() => setGender('male')}
+                            />
+                            Male
+                        </label>
+                        <label>
+                            <input
+                                type="radio"
+                                value="female"
+                                checked={gender === 'female'}
+                                onChange={() => setGender('female')}
+                            />
+                            Female
+                        </label>
+                    </div>
+                    <button type="submit">Create User</button>
+                </>
             </form>
             <p>
                 Already have an account ? {" "}

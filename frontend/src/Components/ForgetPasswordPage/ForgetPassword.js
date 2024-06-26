@@ -3,8 +3,18 @@ import './ForgetPassword.css';
 import { Link, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 
+const LoaderModal = () => (
+  <div className="modal">
+      <div className="modal-content">
+          <div className="loader"></div>
+          <p className="loader_text">Loading...</p>
+      </div>
+  </div>
+);
+
 const ForgetPassword = () => {
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   let navigate = useNavigate();
 
@@ -35,6 +45,8 @@ const ForgetPassword = () => {
       redirect: 'follow',
       credentials: "include",
     }
+
+    setIsLoading(true);
 
     try {
       const response = await fetch('/api/v1/auth/forget-password', requestOption);
@@ -70,10 +82,14 @@ const ForgetPassword = () => {
         text: errorMessage,
       });
     }
+    finally {
+      setIsLoading(false);
+  }
   };
 
   return (
     <div className="forget-password-container">
+      {isLoading && <LoaderModal />}
       <h2>Forgot Your Password?</h2>
       <form onSubmit={handleSubmit} className="forget-password-form">
         <input

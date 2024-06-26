@@ -12,14 +12,15 @@
   .login-user-form {
     display: flex;
     flex-direction: column;
+    left: 0;
   }
   
   .login-user-form input {
-    margin-bottom: 15px;
-    margin-top: 5px;
+    margin: 5px 5px 15px;
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
+    width: 90%;
   }
   
   .login-user-form button {

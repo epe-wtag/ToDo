@@ -61,7 +61,7 @@ async def create_user(
         )
 
 
-@router.post(
+@router.get(
     "/verify",
     response_model=VerifyMessage,
     status_code=status.HTTP_200_OK,
@@ -69,12 +69,12 @@ async def create_user(
 )
 async def verify_email(
     request: Request,
-    email: str = Form(...),
-    v_token: str = Form(...),
+    email: str ,
+    token: str ,
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        verification_result = verify_token(email, v_token)
+        verification_result = verify_token(email, token)
 
         if verification_result:
             user = await user_crud.get_by_email(db, email=email)
@@ -115,31 +115,31 @@ async def login(
     user_in: UserLogin,
     db: AsyncSession = Depends(get_db),
 ):
-    email = user_in.email
+    username = user_in.username
     password = user_in.password
     
-    log.info(f"{SystemMessages.LOG_ATTEMPT_LOGIN} {email}")
+    log.info(f"{SystemMessages.LOG_ATTEMPT_LOGIN} {username}")
     
     try:
-        user = await user_crud.get_by_email(db, email=email)
+        user = await user_crud.get_by_username(db, username=username)
         if user is None:
-            log.error(f"{SystemMessages.LOG_USER_NOT_FOUND} {email}")
+            log.error(f"{SystemMessages.LOG_USER_NOT_FOUND} {username}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=SystemMessages.ERROR_INVALID_CREDENTIALS,
             )
 
-        log.success(f"{SystemMessages.LOG_USER_FOUND} {user}")
+        log.success(f"{SystemMessages.LOG_USER_FOUND} {user.username}")
 
         if not verify_password(password, user.password):
-            log.error(f"{SystemMessages.LOG_INVALID_PASSWORD} {email}")
+            log.error(f"{SystemMessages.LOG_INVALID_PASSWORD} {username}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=SystemMessages.ERROR_INVALID_CREDENTIALS,
             )
 
         if not user.is_active:
-            log.error(f"{SystemMessages.LOG_INACTIVE_USER_LOGIN} {email}")
+            log.error(f"{SystemMessages.LOG_INACTIVE_USER_LOGIN} {username}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=SystemMessages.ERROR_USER_NOT_ACTIVE,
@@ -160,11 +160,11 @@ async def login(
             samesite="none",
             secure=True,
         )
-        log.success(f"{SystemMessages.LOG_USER_LOGGED_IN_SUCCESSFULLY} {email}")
+        log.success(f"{SystemMessages.LOG_USER_LOGGED_IN_SUCCESSFULLY} {username}")
         return response
 
     except NoResultFound:
-        log.error(f"{SystemMessages.LOG_USER_NOT_FOUND} {email}")
+        log.error(f"{SystemMessages.LOG_USER_NOT_FOUND} {username}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=SystemMessages.ERROR_USER_NOT_FOUND,

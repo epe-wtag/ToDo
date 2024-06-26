@@ -127,7 +127,7 @@
 }
 
 .modal-content {
-  background-color: rgb(123, 139, 153);
+  background-color: rgb(123, 139, 153)!important;
   width: 50%; 
   max-width: 500px; 
   margin: 10% auto; 
@@ -181,7 +181,6 @@
 .edit-profile-form button:hover {
   background-color: #454855;
 }
-
 
 @media screen and (max-width: 750px) {
 
