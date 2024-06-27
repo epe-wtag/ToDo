@@ -116,7 +116,7 @@ const Home = () => {
             setSkip(data.skip);
             setLimit(data.limit);
             setTotal(data.total);
-            setPages(data.total);
+            setPages(Math.ceil(data.total / 8));
             console.log(total, limit);
 
         } catch (error) {
@@ -137,7 +137,7 @@ const Home = () => {
             setSkip(data.skip);
             setLimit(data.limit);
             setTotal(data.total);
-            setPages(data.total);
+            setPages(Math.ceil(data.total / 8));
             console.log(total, limit);
 
         } catch (error) {

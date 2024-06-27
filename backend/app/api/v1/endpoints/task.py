@@ -147,6 +147,34 @@ async def search_tasks(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {str(e)}",
         )
+        
+        
+@router.get("/search-delete-requested-tasks/", response_model=TaskList, status_code=status.HTTP_200_OK)
+async def search_delete_requested_tasks(
+    query: str,
+    skip: int = 0,
+    limit: int = 8,
+    db: AsyncSession = Depends(get_db),
+    token_data: TokenData = Depends(get_token_data),
+):
+    log.info(
+        f"{SystemMessages.LOG_FETCH_SEARCH_TASKS.format(query=query, skip=skip, limit=limit)}"
+    )
+    try:
+        admin = admin_role_check(token_data.role)
+
+        tasks, total = await task_crud.search_delete_requests(
+            db, query, token_data.id, admin, skip, limit
+        )
+
+        log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
+        return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
+    except Exception as e:
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {str(e)}",
+        )
 
 
 @router.get("/filter/", response_model=TaskList, status_code=status.HTTP_200_OK)
