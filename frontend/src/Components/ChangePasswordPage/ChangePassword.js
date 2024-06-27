@@ -17,9 +17,28 @@ const ChangePassword = () => {
     const [id, , removeId] = useCookies(['id']);
     const [isAdmin, , removeIsAdmin] = useCookies(['is_admin']);
 
+    const isValidPassword = (newPassword) => {
+        const minLength = 8;
+        const hasUpperCase = /[A-Z]/.test(newPassword);
+        const hasLowerCase = /[a-z]/.test(newPassword);
+        const hasNumber = /\d/.test(newPassword);
+        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
+
+        return newPassword.length >= minLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const errors = {};
+
+        if (!isValidPassword(newPassword)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Password',
+                text: 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character',
+            });
+            return;
+        }
 
         if (newPassword !== confirmPassword) {
             errors.newPassword = "New Password and Confirm Password do not match";

@@ -38,6 +38,16 @@ const Signup = () => {
         return regex.test(email);
     };
 
+    const isValidPassword = (password) => {
+        const minLength = 8;
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+        return password.length >= minLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         const errors = {};
@@ -55,6 +65,15 @@ const Signup = () => {
                     icon: 'error',
                     title: 'Invalid Email',
                     text: 'Please enter a valid email address',
+                });
+                return;
+            }
+
+            if (!isValidPassword(password)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Password',
+                    text: 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character',
                 });
                 return;
             }
@@ -138,7 +157,7 @@ const Signup = () => {
             <h3>SignUp Here</h3>
             {isLoading && <LoaderModal />}
             <form onSubmit={handleSubmit} className="create-user-form">
-                <>
+
                     <input
                         className="user-create-input"
                         type="email"
@@ -155,8 +174,6 @@ const Signup = () => {
                         placeholder="Password"
                         required
                     />
-                </>
-                <>
                     <input
                         className="user-create-input"
                         type="text"
@@ -211,7 +228,7 @@ const Signup = () => {
                         </label>
                     </div>
                     <button type="submit">Create User</button>
-                </>
+
             </form>
             <p>
                 Already have an account ? {" "}

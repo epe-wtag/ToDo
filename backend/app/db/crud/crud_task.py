@@ -6,7 +6,7 @@ from sqlalchemy import String, cast, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.crud.crud_base import CRUDBase
-from app.model.base_model import Category, Task
+from app.model.base_model import Category, Task, User
 from app.schema.task_schema import TaskCreate, TaskUpdate
 from logger import log
 
@@ -109,6 +109,37 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
                     cast(Task.due_date, String).ilike(f"%{query}%"),
                 )
             )
+        total = await db.scalar(
+            select(func.count(Task.id)).filter(base_query.whereclause)
+        )
+        paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
+        result = await db.execute(paginated_query)
+        rows = result.fetchall()
+        tasks = [row[0] for row in rows]
+        return tasks, total
+    
+    async def search_delete_requests(
+        self,
+        db: AsyncSession,
+        query: str,
+        user_id: int,
+        admin: bool,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> Tuple[List[Task], int]:
+        base_query = select(Task).join(User, Task.owner_id == User.id).filter(Task.delete_request == True)
+
+        if not admin:
+            base_query = base_query.filter(Task.owner_id == int(user_id))
+            
+        if query:
+            user_filters = or_(
+                User.username.ilike(f"%{query}%"),
+                User.first_name.ilike(f"%{query}%"),
+                User.last_name.ilike(f"%{query}%")
+            )
+            base_query = base_query.filter(user_filters)
+        
         total = await db.scalar(
             select(func.count(Task.id)).filter(base_query.whereclause)
         )

@@ -7,22 +7,17 @@ import useAuthRedirect from '../CommonComponents/Hooks';
 const DeleteRequest = () => {
     useAuthRedirect();
     const [cards, setAllCards] = useState([]);
-    const [total, setTotal] = useState(9);
+    const [total, setTotal] = useState(0);
     const [pages, setPages] = useState(0);
     const [skip, setSkip] = useState(0);
     const [limit, setLimit] = useState(8);
     const [reload, setReload] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState(null);
-    const [filterResults, setFilterResults] = useState(null);
     const [searching, setSearching] = useState(false);
-    const [filtering, setFiltering] = useState(false);
-    const [status, setStatus] = useState('');
-    const [category, setCategory] = useState('');
-    const [dueDate, setDueDate] = useState('');
 
     useEffect(() => {
-        if (!searching && !filtering) {
+        if (!searching) {
             fetchTasks();
         }
     }, [skip, limit, reload, searching]);
@@ -34,14 +29,16 @@ const DeleteRequest = () => {
                 credentials: 'include',
             });
             const data = await response.json();
-            setAllCards(data.tasks);
-            console.log(data.tasks);
-            if (data.total >= 0) {
+            console.log("Fetched data:", data);
+            if (data.tasks) {
+                setAllCards(data.tasks);
                 setTotal(data.total);
                 setPages(data.total);
-            };
+            } else {
+                console.error("Unexpected data format:", data);
+            }
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error fetching tasks:', error);
         }
     };
 
@@ -49,48 +46,79 @@ const DeleteRequest = () => {
         setReload(!reload);
     };
 
-
-
     const handleNext = () => {
         const newSkip = skip + limit;
-        if (newSkip < total) {
-            setSkip(newSkip);
-        } else {
-            setSkip(Math.max(0, total - limit));
-        }
-
+        setSkip(Math.min(newSkip, total - limit));
     };
 
     const handlePrevious = () => {
         const newSkip = skip - limit;
-        if (newSkip >= 0) {
-            setSkip(newSkip);
-        } else {
-            setSkip(0);
+        setSkip(Math.max(newSkip, 0));
+    };
+
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value);
+    };
+
+    const handleSearchSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            const response = await fetch(`/api/v1/task/search-delete-requested-tasks/?query=${searchQuery}&skip=${skip}&limit=${limit}`, {
+                method: 'GET',
+                credentials: 'include',
+            });
+            const data = await response.json();
+            console.log("Search results:", data);
+            setSearchResults(data.tasks);
+            setSearching(true);
+            setTotal(data.total);
+            setPages(Math.ceil(data.total / 8));
+
+        } catch (error) {
+            console.error('Error searching tasks:', error);
         }
     };
 
+    const clearSearch = () => {
+        setSearchQuery('');
+        setSearchResults(null);
+        setSearching(false);
+        setSkip(0);
+        setLimit(8);
+        setTotal(9);
+        setReload(!reload);
+    };
 
     return (
         <>
             <Sidebar />
-            <h2 className='h2-delete'>Delete Requests</h2>
+            <div className="search-bar">
+                <form onSubmit={handleSearchSubmit}>
+                    <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder="Search tasks..." />
+                    <button type="submit">Search</button>
+                    {searching && <button type="button" onClick={clearSearch}>Clear</button>}
+                </form>
+            </div>
+            <h2 className='h2-delete'></h2>
+
+            
 
             <div className="cards-container-delete-page">
-                <Cards cards={cards} onDelete={handleDelete} />
+                <Cards cards={searchResults || cards} onDelete={handleDelete} />
             </div>
-            {pages > 8 && (
+            {pages > limit && (
                 <div className="pagination-controls">
                     <button onClick={handlePrevious} disabled={skip === 0}>
                         Previous
                     </button>
                     <span>
-                        Page {total && limit ? Math.ceil(skip / limit) + 1 : 1} of {total && limit ? Math.ceil(total / limit) : 1}
+                        Page {skip / limit + 1} of {Math.ceil(total / limit)}
                     </span>
                     <button onClick={handleNext} disabled={skip + limit >= total}>
                         Next
                     </button>
-                </div>)}
+                </div>
+            )}
         </>
     );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCookies } from 'react-cookie';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -19,6 +19,29 @@ const Cards = ({ cards, onDelete }) => {
     const [editedDescription, setEditedDescription] = useState('');
     const [editedDueDate, setEditedDueDate] = useState('');
     const [category, setCategory] = useState('low');
+    const [userData, setUserData] = useState({});
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const uniqueOwnerIds = [...new Set(cards.map(card => card.owner_id))];
+            const userRequests = uniqueOwnerIds.map(ownerId =>
+                fetch(`/api/v1/user/user/${ownerId}`).then(res => res.json())
+            );
+
+            try {
+                const users = await Promise.all(userRequests);
+                const usersMap = {};
+                users.forEach(user => {
+                    usersMap[user.id] = user;
+                });
+                setUserData(usersMap);
+            } catch (error) {
+                console.error('Failed to fetch user data:', error);
+            }
+        };
+
+        fetchUserData();
+    }, [cards]);
 
     const toggleModal = (task) => {
         setSelectedCard(task);
@@ -175,6 +198,9 @@ const Cards = ({ cards, onDelete }) => {
                             <p style={{ fontSize: '12px', color: '#7A8DFD' }}>DeadLine: {new Date(task.due_date).toLocaleDateString()}</p>
                         </>
                     )}
+                    <p className="owner-name">
+                        {userData[task.owner_id] && `${userData[task.owner_id].first_name} ${userData[task.owner_id].last_name}`}
+                    </p>
                 </div>
             ))}
             {showModal && (

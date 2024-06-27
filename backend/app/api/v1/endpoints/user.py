@@ -35,7 +35,6 @@ async def get_user(
     try:
         if user:
             if id == int(token_data.id) or token_data.role == 'admin':
-                log.success(f"{SystemMessages.SUCCESS_USER_FETCHED} : {id}")
                 return user
             else:
                 raise HTTPException(
