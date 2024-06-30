@@ -21,7 +21,21 @@ from app.core.security import (
 from app.core.service import send_reset_email, send_verification_email
 from app.db.crud.crud_auth import user_crud
 from app.db.database import get_db
-from app.schema.auth_schema import ForgetPassword, ForgetPasswordMessage, LogInMessage, LogOutMessage, PasswordChangeMessage, ResetPasswordMessage, TokenData, UserChangePassword, UserCreate, UserInResponse, UserLogin, UserPassReset, VerifyMessage
+from app.schema.auth_schema import (
+    ForgetPassword,
+    ForgetPasswordMessage,
+    LogInMessage,
+    LogOutMessage,
+    PasswordChangeMessage,
+    ResetPasswordMessage,
+    TokenData,
+    UserChangePassword,
+    UserCreate,
+    UserInResponse,
+    UserLogin,
+    UserPassReset,
+    VerifyMessage,
+)
 from app.util.hash import async_hash_password, verify_password
 from logger import log
 
@@ -50,7 +64,7 @@ async def create_user(
         log.error(f"{SystemMessages.ERROR_CREATE_USER}: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username or email already exists"
+            detail="Username or email already exists",
         )
 
     except Exception as e:
@@ -69,8 +83,8 @@ async def create_user(
 )
 async def verify_email(
     request: Request,
-    email: str ,
-    token: str ,
+    email: str,
+    token: str,
     db: AsyncSession = Depends(get_db),
 ):
     try:
@@ -117,9 +131,9 @@ async def login(
 ):
     username = user_in.username
     password = user_in.password
-    
+
     log.info(f"{SystemMessages.LOG_ATTEMPT_LOGIN} {username}")
-    
+
     try:
         user = await user_crud.get_by_username(db, username=username)
         if user is None:
@@ -200,14 +214,11 @@ async def logout(response: Response):
     response_model=ForgetPasswordMessage,
     description="Forget password",
 )
-async def forget_password(
-    input: ForgetPassword, 
-    db: AsyncSession = Depends(get_db)
-    ):
+async def forget_password(input: ForgetPassword, db: AsyncSession = Depends(get_db)):
     email = input.email
-    
+
     log.info(f"{SystemMessages.LOG_SENDING_RESET_EMAIL} {email}")
-    
+
     try:
         user = await user_crud.get_by_email(db, email=email)
 
@@ -245,7 +256,7 @@ async def reset_password(
     email = input.email
     password = input.password
     token = input.token
-    
+
     log.info(f"{SystemMessages.LOG_RESET_PASSWORD_ATTEMPT} {email}")
     try:
         verification_result = verify_reset_token(email, token)

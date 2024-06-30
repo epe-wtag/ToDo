@@ -100,7 +100,7 @@ const CreateTask = () => {
                         </div>
 
                         <div className="form-group">
-                            <label className="label-cat" htmlFor="category">Category:</label>
+                            <label className="label-cat" htmlFor="category">Priority:</label>
                             <select
                                 className="select-cat"
                                 id="category"

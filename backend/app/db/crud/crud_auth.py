@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,20 +13,21 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     async def get_by_email(self, db: AsyncSession, *, email: str) -> Optional[User]:
         result = await db.execute(select(User).filter(User.email == email))
         return result.scalars().first()
-    
-    async def get_by_username(self, db: AsyncSession, *, username: str) -> Optional[User]:
+
+    async def get_by_username(
+        self, db: AsyncSession, *, username: str
+    ) -> Optional[User]:
         result = await db.execute(select(User).filter(User.username == username))
         return result.scalars().first()
 
     async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
         create_data = dict(obj_in)
-        create_data.pop("password")
+        create_data.pop("password") 
         db_obj = User(**create_data)
-        db_obj.password = async_hash_password(obj_in.password)
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
+        db_obj.password = await async_hash_password(obj_in.password)
+        
+        created_user = await super().create(db, obj_in=db_obj)
+        return created_user
 
     async def update(
         self,
@@ -44,6 +45,24 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
     def is_superuser(self, user: User) -> bool:
         return user.is_superuser
+
+    async def get_multi_with_filters(
+        self,
+        db: AsyncSession,
+        *,
+        email: Optional[str] = None,
+        username: Optional[str] = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[User]:
+        base_query = select(User)
+        if email:
+            base_query = base_query.filter(User.email.ilike(f"%{email}%"))
+        if username:
+            base_query = base_query.filter(User.username.ilike(f"%{username}%"))
+
+        users = await self.get_multi(db, skip=skip, limit=limit, query=base_query)
+        return users
 
 
 user_crud = CRUDUser(User)

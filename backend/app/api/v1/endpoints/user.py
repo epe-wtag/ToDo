@@ -34,7 +34,7 @@ async def get_user(
     user = await user_crud.get(db, id)
     try:
         if user:
-            if id == int(token_data.id) or token_data.role == 'admin':
+            if id == int(token_data.id) or token_data.role == "admin":
                 return user
             else:
                 raise HTTPException(
@@ -85,20 +85,19 @@ async def update_user(
                 detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
 
-        if id == int(token_data.id) or token_data.role=='admin':
-            
+        if id == int(token_data.id) or token_data.role == "admin":
             user_update = input
             updated_user = await user_crud.update(db, db_obj=user, obj_in=user_update)
             log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")
             return updated_user
         else:
             raise ValueError("Unauthorized attempt")
-        
+
     except ValueError:
         log.warning(f"Unauthorized attempt to update instance with id {id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You do not have permission to update this resource"
+            detail="You do not have permission to update this resource",
         )
 
     except Exception as e:

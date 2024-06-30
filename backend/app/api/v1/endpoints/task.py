@@ -40,9 +40,13 @@ async def create_task(
             title=input.title,
             description=input.description,
             status=input.status,
-            due_date=datetime.fromisoformat(str(input.due_date)) if input.due_date else None,
+            due_date=datetime.fromisoformat(str(input.due_date))
+            if input.due_date
+            else None,
             category=input.category,
-            completed_at=datetime.fromisoformat(str(input.completed_at)) if input.completed_at else None,
+            completed_at=datetime.fromisoformat(str(input.completed_at))
+            if input.completed_at
+            else None,
             owner_id=token_data.id,
         )
 
@@ -147,9 +151,13 @@ async def search_tasks(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {str(e)}",
         )
-        
-        
-@router.get("/search-delete-requested-tasks/", response_model=TaskList, status_code=status.HTTP_200_OK)
+
+
+@router.get(
+    "/search-delete-requested-tasks/",
+    response_model=TaskList,
+    status_code=status.HTTP_200_OK,
+)
 async def search_delete_requested_tasks(
     query: str,
     skip: int = 0,
@@ -189,7 +197,6 @@ async def filter_tasks(
 ):
     try:
         admin = admin_role_check(token_data.role)
-        
 
         log.info(
             f"{SystemMessages.LOG_FETCH_FILTER_TASKS.format(task_status=task_status, category=category, due_date=due_date, skip=skip, limit=limit, user_id=token_data.id, user_role=token_data.role)}"

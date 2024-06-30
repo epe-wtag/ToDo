@@ -94,7 +94,7 @@ const DeleteRequest = () => {
             <Sidebar />
             <div className="search-bar">
                 <form onSubmit={handleSearchSubmit}>
-                    <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder="Search tasks..." />
+                    <input type="text" value={searchQuery} onChange={handleSearchChange} placeholder="Search tasks by user" />
                     <button type="submit">Search</button>
                     {searching && <button type="button" onClick={clearSearch}>Clear</button>}
                 </form>

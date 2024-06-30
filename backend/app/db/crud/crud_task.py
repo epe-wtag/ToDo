@@ -40,20 +40,12 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
             base_query = base_query.filter(Task.title.ilike(f"%{query}%"))
 
         total = await db.scalar(select(func.count()).select_from(base_query.subquery()))
-        result = await db.execute(
-            base_query.order_by(desc(Task.id)).offset(skip).limit(limit)
-        )
-        rows = result.fetchall()
-        tasks = [row[0] for row in rows]
+        
+        tasks = await self.get_multi(db, skip=skip, limit=limit, query=base_query.order_by(desc(self.model.id)).offset(skip).limit(limit))
         return tasks, total
 
     async def create(self, db: AsyncSession, *, obj_in: TaskCreate) -> Task:
-        create_data = obj_in.dict()
-        db_obj = Task(**create_data)
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
+        return await super().create(db, obj_in=obj_in)
 
     async def update(
         self,
@@ -62,12 +54,7 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         db_obj: Task,
         obj_in: Union[TaskUpdate, Dict[str, Any]],
     ) -> Task:
-        if isinstance(obj_in, dict):
-            update_data = obj_in
-        else:
-            update_data = obj_in.dict(exclude_unset=True)
-
-        return await super().update(db, db_obj=db_obj, obj_in=update_data)
+        return await super().update(db, db_obj=db_obj, obj_in=obj_in)
 
     async def get_delete_requested_tasks(
         self, db: AsyncSession, skip: int = 0, limit: int = 100
@@ -76,18 +63,11 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         total = await db.scalar(
             select(func.count(Task.id)).filter(base_query.whereclause)
         )
-        result = await db.execute(base_query.offset(skip).limit(limit))
-
-        rows = result.fetchall()
-        tasks = [row[0] for row in rows]
+        tasks = await self.get_multi(db, skip=skip, limit=limit, query=base_query.order_by(desc(self.model.id)).offset(skip).limit(limit))
         return tasks, total
 
     async def remove(self, db: AsyncSession, *, id: int) -> Task:
-        obj = await self.get(db, id)
-        if obj:
-            await db.delete(obj)
-            await db.commit()
-        return obj
+        return await super().remove(db, id=id)
 
     async def search(
         self,
@@ -98,7 +78,7 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Task], int]:
-        base_query = select(Task)
+        base_query = select(Task).join(User, Task.owner_id == User.id)
         if not admin:
             base_query = base_query.filter(Task.owner_id == int(user_id))
         if query:
@@ -107,17 +87,18 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
                     Task.title.ilike(f"%{query}%"),
                     Task.description.ilike(f"%{query}%"),
                     cast(Task.due_date, String).ilike(f"%{query}%"),
+                    User.username.ilike(f"%{query}%"),
+                    User.first_name.ilike(f"%{query}%"),
+                    User.last_name.ilike(f"%{query}%"),
                 )
             )
         total = await db.scalar(
             select(func.count(Task.id)).filter(base_query.whereclause)
         )
         paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
-        result = await db.execute(paginated_query)
-        rows = result.fetchall()
-        tasks = [row[0] for row in rows]
+        tasks = await self.get_multi(db, skip=skip, limit=limit, query=paginated_query.order_by(desc(self.model.id)).offset(skip).limit(limit))
         return tasks, total
-    
+
     async def search_delete_requests(
         self,
         db: AsyncSession,
@@ -127,26 +108,28 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Task], int]:
-        base_query = select(Task).join(User, Task.owner_id == User.id).filter(Task.delete_request == True)
+        base_query = (
+            select(Task)
+            .join(User, Task.owner_id == User.id)
+            .filter(Task.delete_request == True)
+        )
 
         if not admin:
             base_query = base_query.filter(Task.owner_id == int(user_id))
-            
+
         if query:
             user_filters = or_(
                 User.username.ilike(f"%{query}%"),
                 User.first_name.ilike(f"%{query}%"),
-                User.last_name.ilike(f"%{query}%")
+                User.last_name.ilike(f"%{query}%"),
             )
             base_query = base_query.filter(user_filters)
-        
+
         total = await db.scalar(
             select(func.count(Task.id)).filter(base_query.whereclause)
         )
         paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
-        result = await db.execute(paginated_query)
-        rows = result.fetchall()
-        tasks = [row[0] for row in rows]
+        tasks = await self.get_multi(db, skip=skip, limit=limit, query=paginated_query.order_by(desc(self.model.id)).offset(skip).limit(limit))
         return tasks, total
 
     async def filter_tasks(
@@ -203,9 +186,7 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
             paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
             log.info(f"Pagination: offset={skip}, limit={limit}")
 
-            result = await db.execute(paginated_query)
-            rows = result.fetchall()
-            tasks = [row[0] for row in rows]
+            tasks = await self.get_multi(db, skip=skip, limit=limit, query=paginated_query.order_by(desc(self.model.id)).offset(skip).limit(limit))
 
             log.info(f"Filtered {len(tasks)} tasks")
             return tasks, total
