@@ -29,15 +29,15 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         db: AsyncSession,
         *,
         user_id: Optional[int],
-        query: Optional[str],
+        title_query: Optional[str],
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Task], int]:
         base_query = select(Task)
         if user_id is not None:
             base_query = base_query.filter(Task.owner_id == user_id)
-        if query:
-            base_query = base_query.filter(Task.title.ilike(f"%{query}%"))
+        if title_query:
+            base_query = base_query.filter(Task.title.ilike(f"%{title_query}%"))
 
         total = await db.scalar(select(func.count()).select_from(base_query.subquery()))
         

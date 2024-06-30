@@ -78,7 +78,7 @@ async def read_tasks(
         tasks, total = await task_crud.get_multi_with_query(
             db=db,
             user_id=int(token_data.id) if not admin else None,
-            query=query,
+            title_query=query,
             skip=skip,
             limit=limit,
         )
