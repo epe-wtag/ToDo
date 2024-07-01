@@ -50,7 +50,7 @@ const Cards = ({ cards, onDelete }) => {
 
         setEditedTitle(task.title);
         setEditedDescription(task.description);
-        setEditedDueDate(task.due_date);
+        setEditedDueDate(task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '');
         setCategory(task.category);
     };
 
@@ -135,10 +135,24 @@ const Cards = ({ cards, onDelete }) => {
                 setShowEditModal(false);
                 onDelete();
             } else {
-                console.error('Failed to edit the task:', response.statusText);
+                const errorData = await response.json();
+                if (response.status === 500 && errorData.detail.includes('due_date')) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Validation Error',
+                        text: 'Due date must be greater than the current date.',
+                    });
+                } else {
+                    console.error('Failed to edit the task:', response.statusText);
+                }
             }
         } catch (error) {
             console.error('Error editing the task:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Failed to edit the task. Please try again later.',
+            });
         }
     };
 
