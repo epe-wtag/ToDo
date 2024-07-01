@@ -25,25 +25,27 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return None
 
     async def get_multi(
-        self,
-        db: AsyncSession,
-        *,
-        skip: int = 0,
-        limit: int = 5000,
-        query: Optional[object] = None
-    ) -> List[ModelType]:
+    self,
+    db: AsyncSession,
+    *,
+    skip: int = 0,
+    limit: int = 5000,
+    query: Optional[object] = None
+) -> List[ModelType]:
         if query is None:
             query = select(self.model).order_by(self.model.id).offset(skip).limit(limit)
         result = await db.execute(query)
         return result.scalars().all()
 
+
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
-        obj_in_data = jsonable_encoder(obj_in)
-        db_obj = self.model(**obj_in_data)
-        db.add(db_obj)
+        # obj_in_data = dict(obj_in)
+        # db_obj = self.model(**obj_in_data)
+        
+        db.add(obj_in)
         await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
+        await db.refresh(obj_in)
+        return obj_in
 
     async def update(
         self,

@@ -40,13 +40,9 @@ async def create_task(
             title=input.title,
             description=input.description,
             status=input.status,
-            due_date=datetime.fromisoformat(str(input.due_date))
-            if input.due_date
-            else None,
+            due_date=datetime.fromisoformat(str(input.due_date)) if input.due_date else None,
             category=input.category,
-            completed_at=datetime.fromisoformat(str(input.completed_at))
-            if input.completed_at
-            else None,
+            completed_at=datetime.fromisoformat(str(input.completed_at)) if input.completed_at else None,
             owner_id=token_data.id,
         )
 

@@ -38,14 +38,24 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
             base_query = base_query.filter(Task.owner_id == user_id)
         if title_query:
             base_query = base_query.filter(Task.title.ilike(f"%{title_query}%"))
-
-        total = await db.scalar(select(func.count()).select_from(base_query.subquery()))
+        base_query = base_query.order_by(desc(Task.id)).offset(skip).limit(limit)
         
-        tasks = await self.get_multi(db, skip=skip, limit=limit, query=base_query.order_by(desc(self.model.id)).offset(skip).limit(limit))
+        result = await db.execute(base_query)
+        tasks = result.scalars().all()
+        
+        count_query = select(func.count(Task.id))
+        
+        total = await db.execute(count_query)
+        total = total.scalar()
+        print("\n\n total:", total)
+        
+
         return tasks, total
 
     async def create(self, db: AsyncSession, *, obj_in: TaskCreate) -> Task:
-        return await super().create(db, obj_in=obj_in)
+        create_data = dict(obj_in)
+        db_obj = Task(**create_data)
+        return await super().create(db, obj_in=db_obj)
 
     async def update(
         self,

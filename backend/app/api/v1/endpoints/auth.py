@@ -56,6 +56,7 @@ async def create_user(
 ):
     try:
         user = await user_crud.create(db, obj_in=user_in)
+        print(user)
         log.info(SystemMessages.SUCCESS_USER_CREATED, user)
         await send_verification_email(user.email)
         return user

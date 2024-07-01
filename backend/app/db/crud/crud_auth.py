@@ -22,9 +22,9 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
 
     async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
         create_data = dict(obj_in)
-        create_data.pop("password") 
+        create_data.pop("password")
         db_obj = User(**create_data)
-        db_obj.password = await async_hash_password(obj_in.password)
+        db_obj.password = async_hash_password(obj_in.password)
         
         created_user = await super().create(db, obj_in=db_obj)
         return created_user
