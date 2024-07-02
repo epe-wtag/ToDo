@@ -34,7 +34,7 @@ async def get_user(
     user = await user_crud.get(db, id)
     try:
         if user:
-            if id == int(token_data.id) or token_data.role == "admin":
+            if id == int(token_data.id) or token_data.role == SystemMessages.ADMIN:
                 return user
             else:
                 raise HTTPException(
@@ -85,7 +85,7 @@ async def update_user(
                 detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
 
-        if id == int(token_data.id) or token_data.role == "admin":
+        if id == int(token_data.id) or token_data.role == SystemMessages.ADMIN:
             user_update = input
             updated_user = await user_crud.update(db, db_obj=user, obj_in=user_update)
             log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")

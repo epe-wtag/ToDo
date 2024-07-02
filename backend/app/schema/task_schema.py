@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
+import bleach
 from pydantic import BaseModel, field_validator
 
 from app.model.base_model import Category
@@ -13,6 +14,13 @@ class TaskBase(BaseModel):
     due_date: Optional[datetime] = None
     category: Optional[Category] = Category.LOW
     completed_at: Optional[datetime] = None
+    
+    @field_validator('title', 'description', mode='before')
+    def sanitize_string(cls, value):
+        cleaned_value = bleach.clean(value, strip=True)
+        if value != cleaned_value:
+            raise ValueError('Input must not contain HTML tags or scripts')
+        return value
 
 
 class TaskCreate(TaskBase):

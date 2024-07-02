@@ -20,9 +20,11 @@ class UserBase(BaseModel):
     
     @field_validator('username', 'first_name', 'last_name', 'email', mode='before')
     def sanitize_string(cls, value):
-        if value:
-            value = bleach.clean(value, strip=True)
+        cleaned_value = bleach.clean(value, strip=True)
+        if value != cleaned_value:
+            raise ValueError('Please provide valid names & number')
         return value
+
      
 
 
@@ -32,7 +34,24 @@ class UserCreate(UserBase):
     
     @field_validator('role', 'password', mode='before')
     def sanitize_role(cls, value):
-        return bleach.clean(value)
+        cleaned_value = bleach.clean(value, strip=True)
+        if value != cleaned_value:
+            raise ValueError('Please provide valid Username & Password')
+        return value
+    
+    @field_validator('password', mode='before')
+    def validate_password(cls, value):
+        if len(value) < 8:
+            raise ValueError('Password must be at least 8 characters long')
+        if not re.search(r'[A-Z]', value):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', value):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'\d', value):
+            raise ValueError('Password must contain at least one digit')
+        if not re.search(r'[@$!%*?&]', value):
+            raise ValueError('Password must contain at least one special symbol (@, $, !, %, *, ?, &)')
+        return value
     
     @field_validator('first_name', 'last_name', mode='before')
     def validate_name(cls, value):
@@ -54,11 +73,13 @@ class UserUpdate(BaseModel):
     last_name: Optional[str]
     contact_number: str = Field(..., pattern=r"^\+?1?\d{9,15}$")
     
-    @field_validator('first_name', 'last_name', mode='before')
-    def validate_name(cls, value):
-        if value and not value.isalpha():
-            raise ValueError('Name must only contain alphabetic characters')
+    @field_validator('username', 'first_name', 'last_name', 'contact_number', mode='before')
+    def sanitize_string(cls, value):
+        cleaned_value = bleach.clean(value, strip=True)
+        if value != cleaned_value:
+            raise ValueError('Please provide valid names & number')
         return value
+    
     
     @field_validator('contact_number', mode='before')
     def validate_contact_number(cls, value):
