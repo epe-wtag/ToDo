@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, status
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,8 +61,8 @@ async def create_task(
 
 @router.get("/tasks/", response_model=TaskList, status_code=status.HTTP_200_OK)
 async def read_tasks(
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, le=8),
     query: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
@@ -97,8 +97,8 @@ async def read_tasks(
     status_code=status.HTTP_200_OK,
 )
 async def read_delete_request_tasks(
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, le=8),
     query: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
@@ -125,8 +125,8 @@ async def read_delete_request_tasks(
 @router.get("/search/", response_model=TaskList, status_code=status.HTTP_200_OK)
 async def search_tasks(
     query: str,
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, le=8),
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
@@ -157,8 +157,8 @@ async def search_tasks(
 )
 async def search_delete_requested_tasks(
     query: str,
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, le=8),
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
@@ -187,8 +187,8 @@ async def filter_tasks(
     task_status: Optional[str] = None,
     category: Optional[str] = None,
     due_date: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, le=8),
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):

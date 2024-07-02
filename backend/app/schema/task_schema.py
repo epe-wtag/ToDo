@@ -14,6 +14,10 @@ class TaskBase(BaseModel):
     due_date: Optional[datetime] = None
     category: Optional[Category] = Category.LOW
     completed_at: Optional[datetime] = None
+
+
+class TaskCreate(TaskBase):
+    owner_id: int
     
     @field_validator('title', 'description', mode='before')
     def sanitize_string(cls, value):
@@ -21,10 +25,6 @@ class TaskBase(BaseModel):
         if value != cleaned_value:
             raise ValueError('Input must not contain HTML tags or scripts')
         return value
-
-
-class TaskCreate(TaskBase):
-    owner_id: int
 
     @field_validator("due_date", mode="before")
     def parse_and_validate_due_date(cls, value):
