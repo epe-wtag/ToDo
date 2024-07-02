@@ -39,6 +39,13 @@ def generate_verification_token(email: str) -> str:
     return token
 
 
+def generate_reset_token(email: str) -> str:
+    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    payload = {"email": email, "exp": expiration_time}
+    token = jwt.encode(payload, settings.RESET_PASSWORD_KEY, algorithm=ALGORITHM)
+    return token
+
+
 def verify_old_password(user: User, old_password: str) -> None:
     if not verify_password(old_password, user.password):
         log.warning(f"Invalid old password for user_id: {user.id}")
@@ -79,13 +86,6 @@ def get_token_data(
         )
 
 
-def generate_reset_token(email: str) -> str:
-    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
-    payload = {"email": email, "exp": expiration_time}
-    token = jwt.encode(payload, settings.RESET_PASSWORD_KEY, algorithm=ALGORITHM)
-    return token
-
-
 def verify_token(email: str, token: str) -> bool:
     try:
         payload = jwt.decode(token, settings.VERIFICATION_KEY, algorithms=[ALGORITHM])
@@ -93,8 +93,8 @@ def verify_token(email: str, token: str) -> bool:
         expiration = payload.get("exp")
         if not response_email or not expiration:
             return False
-        expiration_datetime = datetime.utcfromtimestamp(expiration)
-        if expiration_datetime < datetime.utcnow():
+        expiration_datetime = datetime.fromtimestamp(expiration, timezone.utc)
+        if expiration_datetime < datetime.now(timezone.utc):
             return False
         return response_email == email
     except jwt.JWTError:

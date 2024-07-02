@@ -71,7 +71,7 @@ async def read_tasks(
         f"{SystemMessages.LOG_ATTEMPT_FETCH_TASKS.format(query=query, skip=skip, limit=limit)}"
     )
     try:
-        admin = token_data.role == "admin"
+        admin = token_data.role == SystemMessages.ADMIN
         tasks, total = await task_crud.get_multi_with_query(
             db=db,
             user_id=int(token_data.id) if not admin else None,
@@ -107,7 +107,7 @@ async def read_delete_request_tasks(
         f"{SystemMessages.LOG_FETCH_DELETE_REQUEST_TASKS.format(skip=skip, limit=limit)}"
     )
     try:
-        if token_data.role == "admin":
+        if token_data.role == SystemMessages.ADMIN:
             tasks, total = await task_crud.get_delete_requested_tasks(
                 db, skip=skip, limit=limit
             )
@@ -284,9 +284,9 @@ async def update_task(
         else:
             if (
                 int(token_data.id) == int(db_task.owner_id)
-                or token_data.role == "admin"
+                or token_data.role == SystemMessages.ADMIN
             ):
-                task_data = updated_data.dict(exclude_unset=True)
+                task_data = updated_data.model_dump(exclude_unset=True)
 
                 updated_task = await task_crud.update(
                     db=db,
@@ -337,7 +337,7 @@ async def update_task_status(
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        if int(token_data.id) == int(db_task.owner_id) or token_data.role == "admin":
+        if int(token_data.id) == int(db_task.owner_id) or token_data.role == SystemMessages.ADMIN:
             updated_task = await task_crud.update(
                 db, db_obj=db_task, obj_in={"status": status}
             )
@@ -373,7 +373,7 @@ async def delete_task(
 ):
     log.info(f"{SystemMessages.LOG_DELETING_TASK.format(task_id=task_id)}")
     try:
-        if token_data.role == "admin":
+        if token_data.role == SystemMessages.ADMIN:
             await task_crud.remove(db, id=int(task_id))
 
             return {"message": f"Task deleted successfully by {token_data.id}"}
@@ -406,7 +406,7 @@ async def request_delete_task(
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        if int(token_data.id) == db_task.owner_id or token_data.role == "admin":
+        if int(token_data.id) == db_task.owner_id or token_data.role == SystemMessages.ADMIN:
             updated_task = await task_crud.update(
                 db, db_obj=db_task, obj_in={"delete_request": True}
             )

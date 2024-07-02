@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 
 from app.model.base_model import Category
 
@@ -13,14 +13,12 @@ class TaskBase(BaseModel):
     due_date: Optional[datetime] = None
     category: Optional[Category] = Category.LOW
     completed_at: Optional[datetime] = None
-    
-    
 
 
 class TaskCreate(TaskBase):
     owner_id: int
-    
-    @validator('due_date', pre=True, always=True)
+
+    @field_validator("due_date", mode="before")
     def parse_and_validate_due_date(cls, value):
         if value is None:
             return value
@@ -28,21 +26,21 @@ class TaskCreate(TaskBase):
             try:
                 value = datetime.fromisoformat(value)
             except ValueError:
-                raise ValueError('Invalid datetime format. Must be ISO 8601 format.')
+                raise ValueError("Invalid datetime format. Must be ISO 8601 format.")
 
         if isinstance(value, datetime) and value.tzinfo is not None:
             value = value.astimezone(timezone.utc).replace(tzinfo=None)
 
         if value and value <= datetime.now().replace(tzinfo=None):
-            raise ValueError('Due date must be greater than the current date')
+            raise ValueError("Due date must be greater than the current date")
 
         return value
 
 
 class TaskUpdate(TaskBase):
     owner_id: int
-    
-    @validator('due_date', pre=True, always=True)
+
+    @field_validator("due_date", mode="before")
     def parse_and_validate_due_date(cls, value):
         if value is None:
             return value
@@ -50,13 +48,13 @@ class TaskUpdate(TaskBase):
             try:
                 value = datetime.fromisoformat(value)
             except ValueError:
-                raise ValueError('Invalid datetime format. Must be ISO 8601 format.')
+                raise ValueError("Invalid datetime format. Must be ISO 8601 format.")
 
         if isinstance(value, datetime) and value.tzinfo is not None:
             value = value.astimezone(timezone.utc).replace(tzinfo=None)
 
         if value and value <= datetime.now().replace(tzinfo=None):
-            raise ValueError('Due date must be greater than the current date')
+            raise ValueError("Due date must be greater than the current date")
 
         return value
 

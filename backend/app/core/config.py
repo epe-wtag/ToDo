@@ -13,6 +13,7 @@ from logger import log
 
 load_dotenv()
 
+#load and manage application configuration from environment variables
 class Settings(BaseSettings):
     model_config = ConfigDict(case_sensitive=True)
     
@@ -28,8 +29,8 @@ class Settings(BaseSettings):
     VERIFICATION_KEY: str = os.getenv("VERIFICATION_KEY")
     RESET_PASSWORD_KEY: str = os.getenv("RESET_PASSWORD_KEY")
 
-settings = Settings()
 
+settings = Settings()
 
 
 origins = [
@@ -50,7 +51,7 @@ def cors_middleware(app):
         allow_headers=["*"],
     )
 
-
+#inherits from BaseHTTPMiddleware, it catches unhandled exceptions during HTTP request processing and logs them
 class LogExceptionsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         try:

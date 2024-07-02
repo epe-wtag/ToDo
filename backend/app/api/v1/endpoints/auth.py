@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.exc import IntegrityError

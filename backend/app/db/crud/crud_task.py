@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from fastapi import HTTPException, status
-from sqlalchemy import String, cast, desc, func, or_, select
+from sqlalchemy import String, cast, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.crud.crud_base import CRUDBase
@@ -42,10 +42,10 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         base_query = base_query.order_by(desc(Task.id))
         
         all_tasks = await self.get_multi(db, query=base_query)
-        tasks = all_tasks[skip:skip + limit]
         
         total = len(all_tasks)
-        print(len(tasks))
+        tasks = all_tasks[skip:skip + limit]
+        
         return tasks, total
     
     

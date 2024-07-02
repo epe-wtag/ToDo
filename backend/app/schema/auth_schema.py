@@ -2,7 +2,8 @@ from datetime import datetime
 import re
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field, constr, validator
+import bleach
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 
 class Config:
@@ -16,6 +17,12 @@ class UserBase(BaseModel):
     last_name: Optional[str]
     contact_number: str = Field(..., pattern=r"^\+?1?\d{9,15}$")
     gender: Optional[str]
+    
+    @field_validator('username', 'first_name', 'last_name', 'email', mode='before')
+    def sanitize_string(cls, value):
+        if value:
+            value = bleach.clean(value, strip=True)
+        return value
      
 
 
@@ -23,13 +30,17 @@ class UserCreate(UserBase):
     password: str
     role: str
     
-    @validator('first_name', 'last_name')
+    @field_validator('role', 'password', mode='before')
+    def sanitize_role(cls, value):
+        return bleach.clean(value)
+    
+    @field_validator('first_name', 'last_name', mode='before')
     def validate_name(cls, value):
         if value and not value.isalpha():
             raise ValueError('Name must only contain alphabetic characters')
         return value
     
-    @validator('contact_number')
+    @field_validator('contact_number', mode='before')
     def validate_contact_number(cls, value):
         regex_pattern = r"^\+?1?\d{9,15}$"
         if not re.match(regex_pattern, value):
@@ -43,13 +54,13 @@ class UserUpdate(BaseModel):
     last_name: Optional[str]
     contact_number: str = Field(..., pattern=r"^\+?1?\d{9,15}$")
     
-    @validator('first_name', 'last_name')
+    @field_validator('first_name', 'last_name', mode='before')
     def validate_name(cls, value):
         if value and not value.isalpha():
             raise ValueError('Name must only contain alphabetic characters')
         return value
     
-    @validator('contact_number')
+    @field_validator('contact_number', mode='before')
     def validate_contact_number(cls, value):
         regex_pattern = r"^\+?1?\d{9,15}$"
         if not re.match(regex_pattern, value):

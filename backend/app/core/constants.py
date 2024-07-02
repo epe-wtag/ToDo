@@ -92,5 +92,10 @@ class SystemMessages:
     WARNING_INVALID_RESET_TOKEN = "Invalid reset token for email:"
     WARNING_USER_NOT_FOUND_FOR_EMAIL = "User not found for email:"
     WARNING_TASK_NOT_FOUND = "Task with id {task_id} not found"
+    
+    
+    #Roles
+    ADMIN = "admin"
+    USER = "user"
 
 
