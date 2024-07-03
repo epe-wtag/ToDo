@@ -1,7 +1,8 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-import bleach
+# import bleach
+import nh3
 from pydantic import BaseModel, field_validator
 
 from app.model.base_model import Category
@@ -21,7 +22,7 @@ class TaskCreate(TaskBase):
     
     @field_validator('title', 'description', mode='before')
     def sanitize_string(cls, value):
-        cleaned_value = bleach.clean(value, strip=True)
+        cleaned_value = nh3.clean(value, tags=set(), attributes={})
         if value != cleaned_value:
             raise ValueError('Input must not contain HTML tags or scripts')
         return value
