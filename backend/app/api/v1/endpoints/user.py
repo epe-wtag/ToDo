@@ -33,21 +33,18 @@ async def get_user(
 ):
     user = await user_crud.get(db, id)
     try:
-        if user:
-            if id == int(token_data.id) or token_data.role == SystemMessages.ADMIN:
-                return user
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=SystemMessages.ERROR_PERMISSION_DENIED,
-                )
-        else:
+        if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
-    except HTTPException as e:
-        raise e
+        if id != int(token_data.id) and token_data.role != SystemMessages.ADMIN:
+            raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=SystemMessages.ERROR_PERMISSION_DENIED,
+                )
+        return user
+
     except Exception as e:
         log.error(f"Unhandled exception: {e}")
         raise HTTPException(
@@ -85,13 +82,13 @@ async def update_user(
                 detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
 
-        if id == int(token_data.id) or token_data.role == SystemMessages.ADMIN:
-            user_update = input
-            updated_user = await user_crud.update(db, db_obj=user, obj_in=user_update)
-            log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")
-            return updated_user
-        else:
+        if id != int(token_data.id) and token_data.role != SystemMessages.ADMIN:
             raise ValueError("Unauthorized attempt")
+        
+        user_update = input
+        updated_user = await user_crud.update(db, db_obj=user, obj_in=user_update)
+        log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")
+        return updated_user
 
     except ValueError:
         log.warning(f"Unauthorized attempt to update instance with id {id}")

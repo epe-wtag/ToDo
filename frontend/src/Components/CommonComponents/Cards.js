@@ -118,17 +118,21 @@ const Cards = ({ cards, onDelete }) => {
     const editTask = async (e) => {
         e.preventDefault();
 
-        const formData = new FormData();
-        formData.append('title', editedTitle);
-        formData.append('description', editedDescription);
-        formData.append('due_date', editedDueDate);
-        formData.append('category', category);
-        formData.append('owner_id', selectedCard.owner_id);
+        const data = {
+            title: editedTitle,
+            description: editedDescription,
+            due_date: editedDueDate,
+            category: category,
+            owner_id: selectedCard.owner_id
+          };
 
         try {
             const response = await fetch(`/api/v1/task/tasks/${selectedCard.id}`, {
                 method: 'PUT',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json',
+                  },
+                body: JSON.stringify(data),
             });
 
             if (response.ok) {

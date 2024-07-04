@@ -2,8 +2,7 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.exc import NoResultFound
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
@@ -56,7 +55,6 @@ async def create_user(
 ):
     try:
         user = await user_crud.create(db, obj_in=user_in)
-        print(user)
         log.info(SystemMessages.SUCCESS_USER_CREATED, user)
         await send_verification_email(user.email)
         return user
@@ -90,28 +88,29 @@ async def verify_email(
 ):
     try:
         verification_result = verify_token(email, token)
-
-        if verification_result:
-            user = await user_crud.get_by_email(db, email=email)
-
-            if user:
-                user.is_active = True
-                await db.commit()
-
-                return templates.TemplateResponse(
-                    "verification_result.html",
-                    {"request": request, "verification_result": verification_result},
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"{SystemMessages.ERROR_USER_NOT_FOUND} {email}",
-                )
-        else:
+        
+        if not verification_result:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=SystemMessages.ERROR_VERIFICATION_FAILED,
             )
+        user = await user_crud.get_by_email(db, email=email)
+        
+        if not user:
+            raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"{SystemMessages.ERROR_USER_NOT_FOUND} {email}",
+                )
+        
+        user.is_active = True
+        await db.commit()
+
+        return templates.TemplateResponse(
+            "verification_result.html",
+            {"request": request, "verification_result": verification_result},
+        )
+            
+        
     except Exception:
         log.error(SystemMessages.ERROR_INTERNAL_SERVER)
         raise HTTPException(
@@ -122,8 +121,8 @@ async def verify_email(
 
 @router.post(
     "/login",
-    status_code=status.HTTP_200_OK,
     response_model=LogInMessage,
+    status_code=status.HTTP_200_OK,
     description="User login",
 )
 async def login(
@@ -184,10 +183,6 @@ async def login(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=SystemMessages.ERROR_USER_NOT_FOUND,
         )
-
-    except HTTPException as http_err:
-        log.error(f"{SystemMessages.LOG_HTTP_EXCEPTION} {http_err.detail}")
-        raise
 
     except Exception as e:
         log.error(f"{SystemMessages.LOG_USER_LOGIN_FAILED} {e}")

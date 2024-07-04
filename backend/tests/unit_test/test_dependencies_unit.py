@@ -1,6 +1,8 @@
 from unittest.mock import Mock, patch
-from fastapi import HTTPException
+
 import pytest
+from fastapi import HTTPException
+
 from app.core.dependency import admin_role_check, check_user_active
 from app.core.security import get_current_user
 from app.model.base_model import User
