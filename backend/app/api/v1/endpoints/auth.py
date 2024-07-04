@@ -18,9 +18,9 @@ from app.core.security import (
     verify_token,
 )
 from app.core.service import send_reset_email, send_verification_email
-from app.db.crud.crud_auth import user_crud
+from app.db.crud.auth import user_crud
 from app.db.database import get_db
-from app.schema.auth_schema import (
+from app.schema.auth import (
     ForgetPassword,
     ForgetPasswordMessage,
     LogInMessage,

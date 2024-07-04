@@ -3,9 +3,9 @@ from typing import Any, Dict, List, Optional, Union
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.crud.crud_base import CRUDBase
-from app.model.base_model import User
-from app.schema.auth_schema import UserCreate, UserUpdate
+from app.db.crud.base import CRUDBase
+from app.model.base import User
+from app.schema.auth import UserCreate, UserUpdate
 from app.util.hash import async_hash_password
 
 

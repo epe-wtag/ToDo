@@ -14,6 +14,21 @@ const CreateTask = () => {
 
     let navigate = useNavigate();
 
+    const handleDateChange = (e) => {
+        const selectedDate = e.target.value;
+        const currentDate = new Date().toISOString().split('T')[0];
+
+        if (selectedDate < currentDate) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Due Date',
+                text: 'Due date cannot be a past date. Please select a valid date.',
+            });
+        } else {
+            setDueDate(selectedDate);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -101,7 +116,7 @@ const CreateTask = () => {
                                 type="date"
                                 id="dueDate"
                                 value={dueDate}
-                                onChange={(e) => setDueDate(e.target.value)}
+                                onChange={handleDateChange}
                             />
                         </div>
 

@@ -3,7 +3,7 @@ from typing import Type
 
 from fastapi import HTTPException, status
 
-from app.model.base_model import User
+from app.model.base import User
 from logger import log
 
 

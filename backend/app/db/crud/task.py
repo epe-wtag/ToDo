@@ -5,9 +5,9 @@ from fastapi import HTTPException, status
 from sqlalchemy import String, cast, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.crud.crud_base import CRUDBase
-from app.model.base_model import Category, Task, User
-from app.schema.task_schema import TaskCreate, TaskUpdate
+from app.db.crud.base import CRUDBase
+from app.model.base import Category, Task, User
+from app.schema.task import TaskCreate, TaskUpdate
 from logger import log
 
 

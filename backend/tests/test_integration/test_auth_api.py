@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
 from app.core.security import create_access_token, generate_reset_token
-from app.model.base_model import User
+from app.model.base import User
 from app.util.hash import async_hash_password
 from main import app
 

@@ -8,8 +8,8 @@ from app.core.dependency import (
     check_user_active,
     validate_and_convert_enum_value,
 )
-from app.model.base_model import User
-from app.schema.auth_schema import TokenData
+from app.model.base import User
+from app.schema.auth import TokenData
 
 
 @pytest.fixture

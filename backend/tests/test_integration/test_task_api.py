@@ -7,9 +7,9 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token
-from app.model.base_model import Task, User
-from app.schema.auth_schema import TokenData
-from app.schema.task_schema import TaskCreate, TaskInDB
+from app.model.base import Task, User
+from app.schema.auth import TokenData
+from app.schema.task import TaskCreate, TaskInDB
 from main import app
 
 client = TestClient(app)

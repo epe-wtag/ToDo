@@ -12,11 +12,11 @@ from app.core.dependency import (
     validate_and_convert_enum_value,
 )
 from app.core.security import get_token_data
-from app.db.crud.crud_task import task_crud
+from app.db.crud.task import task_crud
 from app.db.database import get_db
-from app.model.base_model import Category
-from app.schema.auth_schema import TokenData
-from app.schema.task_schema import (
+from app.model.base import Category
+from app.schema.auth import TokenData
+from app.schema.task import (
     Message,
     TaskBase,
     TaskCreate,
@@ -69,7 +69,7 @@ async def create_task(
 @router.get("/tasks/", response_model=TaskList, status_code=status.HTTP_200_OK)
 async def read_tasks(
     skip: int = Query(0, le=5000),
-    limit: int = Query(8, le=8),
+    limit: int = Query(8, ge=1),
     query: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
@@ -105,7 +105,7 @@ async def read_tasks(
 )
 async def read_delete_request_tasks(
     skip: int = Query(0, le=5000),
-    limit: int = Query(8, le=8),
+    limit: int = Query(8, ge=1),
     query: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
@@ -129,11 +129,13 @@ async def read_delete_request_tasks(
         )
 
 
-@router.get("/search/", response_model=TaskList, status_code=status.HTTP_200_OK)
+@router.get("/search/", 
+    response_model=TaskList, 
+    status_code=status.HTTP_200_OK)
 async def search_tasks(
     query: str,
     skip: int = Query(0, le=5000),
-    limit: int = Query(8, le=8),
+    limit: int = Query(8, ge=1),
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
@@ -146,9 +148,7 @@ async def search_tasks(
         tasks, total = await task_crud.search(
             db, query, token_data.id, admin, skip, limit
         )
-
-        log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
-        return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
+        return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {e}")
         raise HTTPException(
@@ -165,7 +165,7 @@ async def search_tasks(
 async def search_delete_requested_tasks(
     query: str,
     skip: int = Query(0, le=5000),
-    limit: int = Query(8, le=8),
+    limit: int = Query(8, ge=1),
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
@@ -180,7 +180,7 @@ async def search_delete_requested_tasks(
         )
 
         log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
-        return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
+        return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {e}")
         raise HTTPException(
@@ -195,7 +195,7 @@ async def filter_tasks(
     category: Optional[str] = None,
     due_date: Optional[str] = None,
     skip: int = Query(0, le=5000),
-    limit: int = Query(8, le=8),
+    limit: int = Query(8, ge=1),
     db: AsyncSession = Depends(get_db),
     token_data: TokenData = Depends(get_token_data),
 ):
@@ -227,7 +227,9 @@ async def filter_tasks(
         )
 
 
-@router.get("/tasks/{task_id}", response_model=TaskInDB, status_code=status.HTTP_200_OK)
+@router.get("/tasks/{task_id}", 
+    response_model=TaskInDB, 
+    status_code=status.HTTP_200_OK)
 async def read_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
@@ -255,6 +257,7 @@ async def read_task(
 
 @router.put(
     "/tasks/{task_id}", 
+    response_model=TaskInDB,
     status_code=status.HTTP_200_OK, 
 )
 async def update_task(

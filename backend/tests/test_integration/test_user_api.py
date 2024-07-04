@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
 from app.core.security import create_access_token
-from app.model.base_model import User
-from app.schema.auth_schema import TokenData
+from app.model.base import User
+from app.schema.auth import TokenData
 from main import app
 
 client = TestClient(app)

@@ -5,9 +5,9 @@ from app.core.constants import SystemMessages
 from app.core.security import (
     get_token_data,
 )
-from app.db.crud.crud_auth import user_crud
+from app.db.crud.auth import user_crud
 from app.db.database import get_db
-from app.schema.auth_schema import TokenData, UserInResponse, UserUpdate
+from app.schema.auth import TokenData, UserInResponse, UserUpdate
 from logger import log
 
 router = APIRouter(prefix="/user", tags=["User:"])

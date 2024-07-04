@@ -6,8 +6,8 @@ from fastapi.security import HTTPBearer
 from jose import jwt
 
 from app.core.config import settings
-from app.model.base_model import User
-from app.schema.auth_schema import TokenData
+from app.model.base import User
+from app.schema.auth import TokenData
 from app.util.hash import async_hash_password, verify_password
 from logger import log
 
@@ -58,16 +58,12 @@ def get_token_data(
     token: Optional[str] = Cookie("token", secure=True, httponly=True),
     response: Response = None,
 ) -> TokenData:
-    if not token or token == "token" or token is None:
-        if response is not None:
-            response.delete_cookie("id")
-            response.delete_cookie("is_admin")
-            response.headers.update({"WWW-Authenticate": "Bearer"})
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token is missing",
-                headers=response.headers,
-            )
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token is missing",
+            headers=response.headers,
+        )
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])

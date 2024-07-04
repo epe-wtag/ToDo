@@ -1,11 +1,10 @@
 from datetime import datetime, timezone
 from typing import List, Optional
 
-# import bleach
 import nh3
 from pydantic import BaseModel, field_validator
 
-from app.model.base_model import Category
+from app.model.base import Category
 
 
 class TaskBase(BaseModel):
@@ -72,7 +71,6 @@ class TaskInDB(TaskBase):
     id: int
     delete_request: Optional[bool]
     owner_id: Optional[int]
-    status: Optional[bool]
 
 
 class TaskList(BaseModel):

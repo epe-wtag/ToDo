@@ -5,8 +5,8 @@ from fastapi import HTTPException
 
 from app.core.dependency import admin_role_check, check_user_active
 from app.core.security import get_current_user
-from app.model.base_model import User
-from app.schema.auth_schema import TokenData
+from app.model.base import User
+from app.schema.auth import TokenData
 
 
 @pytest.mark.asyncio

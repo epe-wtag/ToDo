@@ -138,17 +138,49 @@ const Cards = ({ cards, onDelete }) => {
             if (response.ok) {
                 setShowEditModal(false);
                 onDelete();
+                toast.success('Task updated successfully');
             } else {
                 const errorData = await response.json();
-                if (response.status === 500 && errorData.detail.includes('due_date')) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Validation Error',
-                        text: 'Due date must be greater than the current date.',
-                    });
-                } else {
-                    console.error('Failed to edit the task:', response.statusText);
+                switch (response.status) {
+                    case 422:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Validation Error',
+                            text: errorData.detail.includes('due_date') ? 
+                                'Due date must be greater than the current date.' : 
+                                'Invalid data. Please check your input and try again.',
+                        });
+                        break;
+                    case 404:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Not Found',
+                            text: 'Task not found.',
+                        });
+                        break;
+                    case 401:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Unauthorized',
+                            text: 'You do not have permission to update this resource.',
+                        });
+                        break;
+                    case 304:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Not Modified',
+                            text: 'Task could not be updated. Please try again later.',
+                        });
+                        break;
+                    default:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: 'Failed to edit the task. Please try again later.',
+                        });
+                        break;
                 }
+                console.error('Failed to edit the task:', response.statusText);
             }
         } catch (error) {
             console.error('Error editing the task:', error);
@@ -180,6 +212,21 @@ const Cards = ({ cards, onDelete }) => {
             }
         } catch (error) {
             console.error('Error editing the task:', error);
+        }
+    };
+
+    const handleDateChange = (e) => {
+        const selectedDate = e.target.value;
+        const currentDate = new Date().toISOString().split('T')[0];
+
+        if (selectedDate < currentDate) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Due Date',
+                text: 'Due date cannot be a past date. Please select a valid date.',
+            });
+        } else {
+            setEditedDueDate(selectedDate);
         }
     };
 
@@ -280,7 +327,7 @@ const Cards = ({ cards, onDelete }) => {
                             </div>
                             <div className="edit-modal-form">
                                 <label>Due Date:</label>
-                                <input type="date" value={editedDueDate} onChange={(e) => setEditedDueDate(e.target.value)} />
+                                <input type="date" value={editedDueDate} onChange={handleDateChange} />
                             </div>
                             <div className="edit-modal-form">
                                 <label className="label-cat" htmlFor="category">Priority:</label>
