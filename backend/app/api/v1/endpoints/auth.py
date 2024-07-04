@@ -57,7 +57,16 @@ async def create_user(
         user = await user_crud.create(db, obj_in=user_in)
         log.info(SystemMessages.SUCCESS_USER_CREATED, user)
         await send_verification_email(user.email)
-        return user
+        return UserInResponse(
+            id=user.id,
+            email=user.email,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            contact_number=user.contact_number,
+            gender=user.gender,
+            created_at=user.created_at,
+            is_active=user.is_active,
+        )
 
     except IntegrityError as e:
         log.error(f"{SystemMessages.ERROR_CREATE_USER}: {e}")
@@ -105,10 +114,13 @@ async def verify_email(
         user.is_active = True
         await db.commit()
 
-        return templates.TemplateResponse(
+        response_message = VerifyMessage(message="Email verification successful")
+        html_content = templates.TemplateResponse(
             "verification_result.html",
             {"request": request, "verification_result": verification_result},
         )
+        
+        return response_message, html_content
             
         
     except Exception:
@@ -201,7 +213,7 @@ async def login(
 async def logout(response: Response):
     log.info(SystemMessages.LOG_LOGGING_OUT_USER)
     response.delete_cookie("token")
-    return {"message": SystemMessages.SUCCESS_LOGGED_OUT}
+    return LogOutMessage(message=SystemMessages.SUCCESS_LOGGED_OUT)
 
 
 @router.post(
@@ -229,7 +241,7 @@ async def forget_password(input: ForgetPassword, db: AsyncSession = Depends(get_
         await send_reset_email(email, reset_token)
         log.info(f"{SystemMessages.SUCCESS_RESET_EMAIL_SENT} to: {email}")
 
-        return {"message": SystemMessages.SUCCESS_RESET_EMAIL_SENT}
+        return ForgetPasswordMessage(message=SystemMessages.SUCCESS_RESET_EMAIL_SENT)
 
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_SEND_RESET_EMAIL} {e}")
@@ -272,7 +284,7 @@ async def reset_password(
         await db.commit()
         log.info(f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}")
 
-        return {"message": f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}"}
+        return ResetPasswordMessage(message=f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}")
 
     except NoResultFound:
         log.warning(f"{SystemMessages.WARNING_USER_NOT_FOUND_FOR_EMAIL} {email}")
@@ -316,7 +328,7 @@ async def change_password(
 
         response.delete_cookie("token")
         log.info(f"{SystemMessages.SUCCESS_PASSWORD_CHANGED} {user_id}")
-        return {"message": f"{SystemMessages.SUCCESS_PASSWORD_CHANGED} {user_id}"}
+        return PasswordChangeMessage(message=f"{SystemMessages.SUCCESS_PASSWORD_CHANGED} {user_id}")
 
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_CHANGE_PASSWORD} {e}")

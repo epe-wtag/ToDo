@@ -120,7 +120,9 @@ async def read_delete_request_tasks(
             )
 
             log.info(f"{SystemMessages.LOG_FETCHED_TASKS.format(len(tasks))}")
-            return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
+            task_list = [TaskInDB.from_orm(task) for task in tasks]
+        
+            return TaskList(tasks=task_list, total=total, skip=skip, limit=limit)
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASKS} {e}")
         raise HTTPException(
@@ -148,7 +150,11 @@ async def search_tasks(
         tasks, total = await task_crud.search(
             db, query, token_data.id, admin, skip, limit
         )
-        return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
+        
+        task_list = [TaskInDB.from_orm(task) for task in tasks]
+        
+        return TaskList(tasks=task_list, total=total, skip=skip, limit=limit)
+    
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {e}")
         raise HTTPException(
@@ -178,9 +184,11 @@ async def search_delete_requested_tasks(
         tasks, total = await task_crud.search_delete_requests(
             db, query, token_data.id, admin, skip, limit
         )
+        
+        task_list = [TaskInDB.from_orm(task) for task in tasks]
 
         log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
-        return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
+        return TaskList(tasks=task_list, total=total, skip=skip, limit=limit)
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {e}")
         raise HTTPException(
@@ -217,8 +225,11 @@ async def filter_tasks(
             skip=skip,
             limit=limit,
         )
+        
+        task_list = [TaskInDB.from_orm(task) for task in tasks]
+        
         log.info(f"{SystemMessages.LOG_FETCH_TOTAL_TASKS.format(total=total)}")
-        return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
+        return TaskList(tasks=task_list, total=total, skip=skip, limit=limit)
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_FILTER_TASKS} {e}")
         raise HTTPException(
@@ -246,7 +257,7 @@ async def read_task(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
             )
         log.info(f"{SystemMessages.LOG_FETCH_TASK_SUCCESS.format(task_id=task_id)}")
-        return task
+        return TaskInDB.model_validate(task)
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASK} {e}")
         raise HTTPException(
@@ -295,7 +306,8 @@ async def update_task(
         task_data = updated_data.model_dump(exclude_unset=True)
         updated_task = await task_crud.update(db=db, db_obj=db_task, obj_in=task_data)
         log.info(f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
-        return updated_task
+        return TaskInDB.model_validate(updated_task)
+    
     except ValidationError as ve:
         log.error(f"Validation error: {ve}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
@@ -330,7 +342,7 @@ async def update_task_status(
             log.info(
                 f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}"
             )
-            return updated_task
+            return TaskInDB.model_validate(updated_task)
         else:
             raise ValueError("Unauthorized attempt")
 
@@ -350,7 +362,9 @@ async def update_task_status(
 
 
 @router.delete(
-    "/tasks/{task_id}", status_code=status.HTTP_200_OK, response_model=Message
+    "/tasks/{task_id}", 
+    response_model=Message,
+    status_code=status.HTTP_200_OK
 )
 async def delete_task(
     task_id: int,
@@ -363,7 +377,7 @@ async def delete_task(
             raise ValueError("You are not allowed to update this resource")
         
         await task_crud.remove(db, id=int(task_id))
-        return {"message": f"Task deleted successfully by {token_data.id}"}
+        return Message(message=f"Task deleted successfully by {token_data.id}")
     
     except ValueError as e:
         log.warning(
@@ -401,7 +415,7 @@ async def request_delete_task(
         log.info(
             f"{SystemMessages.LOG_TASK_DELETE_REQUEST_SUCCESS.format(task_id=task_id)}"
         )
-        return updated_task
+        return TaskInDB.model_validate(updated_task)
 
     except ValueError:
         log.warning(f"Unauthorized attempt to update instance with id: {id}")

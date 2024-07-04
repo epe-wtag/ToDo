@@ -14,6 +14,10 @@ class TaskBase(BaseModel):
     due_date: Optional[datetime] = None
     category: Optional[Category] = Category.LOW
     completed_at: Optional[datetime] = None
+    
+    
+    class Config:
+        orm_mode = True
 
 
 class TaskCreate(TaskBase):
@@ -71,6 +75,14 @@ class TaskInDB(TaskBase):
     id: int
     delete_request: Optional[bool]
     owner_id: Optional[int]
+    
+    class Config:
+        orm_mode = True
+        from_attributes = True  
+        
+    @classmethod
+    def from_orm(cls, obj):
+        return cls.model_validate(obj)
 
 
 class TaskList(BaseModel):
