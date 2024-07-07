@@ -33,10 +33,10 @@ const Signup = () => {
         return regex.test(phoneNumber);
     };
 
-    const isValidEmail = (email) => {
-        const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return regex.test(email);
-    };
+    // const isValidEmail = (email) => {
+    //     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    //     return regex.test(email);
+    // };
 
     const isValidPassword = (password) => {
         const minLength = 8;
@@ -60,14 +60,14 @@ const Signup = () => {
                 return;
             }
 
-            if (!isValidEmail(email)) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Invalid Email',
-                    text: 'Please enter a valid email address',
-                });
-                return;
-            }
+            // if (!isValidEmail(email)) {
+            //     Swal.fire({
+            //         icon: 'error',
+            //         title: 'Invalid Email',
+            //         text: 'Please enter a valid email address',
+            //     });
+            //     return;
+            // }
 
             if (!isValidPassword(password)) {
                 Swal.fire({

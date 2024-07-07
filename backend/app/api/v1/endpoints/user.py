@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
+from app.core.dependency import is_user_or_admin
 from app.core.security import (
     get_token_data,
 )
@@ -29,7 +31,7 @@ router = APIRouter(prefix="/user", tags=["User:"])
 async def get_user(
     id: int,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
     user = await user_crud.get(db, id)
     try:
@@ -38,12 +40,31 @@ async def get_user(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
-        if id != int(token_data.id) and token_data.role != SystemMessages.ADMIN:
+        if is_user_or_admin(get_current_user.id, id, get_current_user.role):
             raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=SystemMessages.ERROR_PERMISSION_DENIED,
                 )
-        return user
+        created_at_iso = user.created_at.isoformat() if user.created_at else None
+        user_response = UserInResponse(
+            id=user.id,
+            email=user.email,
+            username=user.username,
+            first_name=user.first_name,
+            last_name=user.last_name,
+            contact_number=user.contact_number,
+            gender=user.gender,
+            created_at=created_at_iso,
+            is_active=user.is_active,
+        )
+        
+        user_response_dict = user_response.model_dump(exclude_unset=True)
+        user_response_dict['created_at'] = created_at_iso 
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=user_response_dict,
+        )
 
     except Exception as e:
         log.error(f"Unhandled exception: {e}")
@@ -70,9 +91,9 @@ async def update_user(
     id: int,
     input: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_ATTEMPT_UPDATE_USER} {id}--{token_data.id}")
+    log.info(f"{SystemMessages.LOG_ATTEMPT_UPDATE_USER} {id}--{get_current_user.id}")
     try:
         user = await user_crud.get(db, id)
         if not user:
@@ -82,19 +103,37 @@ async def update_user(
                 detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
 
-        if id != int(token_data.id) and token_data.role != SystemMessages.ADMIN:
-            raise ValueError("Unauthorized attempt")
+        if is_user_or_admin(get_current_user.id, id, get_current_user.role):
+            raise ValueError(SystemMessages.ERROR_UNAUTHORIZED_ATTEMPT)
         
         user_update = input
         updated_user = await user_crud.update(db, db_obj=user, obj_in=user_update)
         log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")
-        return updated_user
+        user_response = UserInResponse(
+            id=updated_user.id,
+            email=updated_user.email,
+            username=updated_user.username,
+            first_name=updated_user.first_name,
+            last_name=updated_user.last_name,
+            contact_number=updated_user.contact_number,
+            gender=updated_user.gender,
+            created_at=updated_user.created_at,
+            is_active=updated_user.is_active,
+        )
+        
+        user_response_dict = user_response.model_dump(exclude_unset=True)
+        user_response_dict['created_at'] = user_response.created_at.isoformat() if user_response.created_at else None
+        
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=user_response_dict,
+        )
 
     except ValueError:
-        log.warning(f"Unauthorized attempt to update instance with id {id}")
+        log.warning(f"{SystemMessages.ERROR_UNAUTHORIZED_UPDATE}: {id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You do not have permission to update this resource",
+            detail=SystemMessages.ERROR_PERMISSION_DENIED,
         )
 
     except Exception as e:

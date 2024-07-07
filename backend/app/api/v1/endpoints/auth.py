@@ -1,6 +1,7 @@
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -45,8 +46,8 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.post(
     "/create-user",
-    status_code=status.HTTP_201_CREATED,
     response_model=UserInResponse,
+    status_code=status.HTTP_201_CREATED,
     description="Create a new user",
 )
 async def create_user(
@@ -57,22 +58,33 @@ async def create_user(
         user = await user_crud.create(db, obj_in=user_in)
         log.info(SystemMessages.SUCCESS_USER_CREATED, user)
         await send_verification_email(user.email)
-        return UserInResponse(
+        created_at_iso = user.created_at.isoformat() if user.created_at else None
+        
+        user_response = UserInResponse(
             id=user.id,
             email=user.email,
+            username=user.username,
             first_name=user.first_name,
             last_name=user.last_name,
             contact_number=user.contact_number,
             gender=user.gender,
-            created_at=user.created_at,
+            created_at=created_at_iso,
             is_active=user.is_active,
+        )
+        
+        user_response_dict = user_response.model_dump(exclude_unset=True)
+        user_response_dict['created_at'] = created_at_iso 
+        
+        return JSONResponse(
+            status_code=status.HTTP_201_CREATED,
+            content=user_response_dict,
         )
 
     except IntegrityError as e:
         log.error(f"{SystemMessages.ERROR_CREATE_USER}: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username or email already exists",
+            detail=SystemMessages.ERROR_USER_ALREADY_EXIST,
         )
 
     except Exception as e:
@@ -114,7 +126,7 @@ async def verify_email(
         user.is_active = True
         await db.commit()
 
-        response_message = VerifyMessage(message="Email verification successful")
+        response_message = VerifyMessage(message=SystemMessages.SUCCESS_EMAIL_VERIFICATION)
         html_content = templates.TemplateResponse(
             "verification_result.html",
             {"request": request, "verification_result": verification_result},
@@ -172,7 +184,7 @@ async def login(
             )
 
         access_token = create_access_token(data={"user_id": user.id, "role": user.role})
-        is_admin = 1 if user.role == "admin" else 0
+        is_admin = 1 if user.role == SystemMessages.ADMIN else 0
 
         response_content = {"id": user.id, "is_admin": is_admin}
         response = Response(
@@ -206,8 +218,8 @@ async def login(
 
 @router.post(
     "/logout",
-    status_code=status.HTTP_200_OK,
     response_model=LogOutMessage,
+    status_code=status.HTTP_200_OK,
     description="User logout",
 )
 async def logout(response: Response):
@@ -218,8 +230,8 @@ async def logout(response: Response):
 
 @router.post(
     "/forget-password",
-    status_code=status.HTTP_200_OK,
     response_model=ForgetPasswordMessage,
+    status_code=status.HTTP_200_OK,
     description="Forget password",
 )
 async def forget_password(input: ForgetPassword, db: AsyncSession = Depends(get_db)):
@@ -253,8 +265,8 @@ async def forget_password(input: ForgetPassword, db: AsyncSession = Depends(get_
 
 @router.post(
     "/reset-password",
-    status_code=status.HTTP_200_OK,
     response_model=ResetPasswordMessage,
+    status_code=status.HTTP_200_OK,
     description="Reset password",
 )
 async def reset_password(
@@ -303,21 +315,21 @@ async def reset_password(
 
 @router.post(
     "/change-password",
-    status_code=status.HTTP_200_OK,
     response_model=PasswordChangeMessage,
+    status_code=status.HTTP_200_OK,
     description="Change password",
 )
 async def change_password(
     response: Response,
     input: UserChangePassword,
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
     db: AsyncSession = Depends(get_db),
 ):
     old_password = input.old_password
     new_password = input.new_password
-    log.info(f"{SystemMessages.LOG_CHANGE_PASSWORD_ATTEMPT} {token_data.id}")
+    log.info(f"{SystemMessages.LOG_CHANGE_PASSWORD_ATTEMPT} {get_current_user.id}")
     try:
-        user_id = int(token_data.id)
+        user_id = int(get_current_user.id)
         user = await user_crud.get(db, int(user_id))
 
         verify_old_password(user, old_password)

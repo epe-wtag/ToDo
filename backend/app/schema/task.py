@@ -16,8 +16,18 @@ class TaskBase(BaseModel):
     completed_at: Optional[datetime] = None
     
     
+    @field_validator('category', mode='before')
+    def validate_category(cls, value):
+        if isinstance(value, str):
+            return Category(value)
+        elif isinstance(value, Category):
+            return value
+        raise ValueError('Invalid category')
+
+    
+    
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class TaskCreate(TaskBase):
@@ -25,6 +35,7 @@ class TaskCreate(TaskBase):
     
     @field_validator('title', 'description', mode='before')
     def sanitize_string(cls, value):
+        
         cleaned_value = nh3.clean(value, tags=set(), attributes={})
         if value != cleaned_value:
             raise ValueError('Input must not contain HTML tags or scripts')
@@ -77,7 +88,6 @@ class TaskInDB(TaskBase):
     owner_id: Optional[int]
     
     class Config:
-        orm_mode = True
         from_attributes = True  
         
     @classmethod
