@@ -561,7 +561,7 @@ async def update_task_status(
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        if not is_task_owner_or_admin(get_current_user.id, db_task.owner_id, get_current_user.role):
+        if is_task_owner_or_admin(get_current_user.id, db_task.owner_id, get_current_user.role):
             raise ValueError(SystemMessages.ERROR_UNAUTHORIZED_ATTEMPT)
         updated_task = await task_crud.update(
             db, db_obj=db_task, obj_in={"status": status}
@@ -569,21 +569,26 @@ async def update_task_status(
         log.info(
             f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}"
         )
-        serialized_task = {
-            "id": updated_task.id,
-            "title": updated_task.title,
-            "description": updated_task.description,
-            "status": updated_task.status,
-            "due_date": updated_task.due_date.isoformat() if updated_task.due_date else None,
-            "category": updated_task.category.value if updated_task.category else None,
-            "completed_at": updated_task.completed_at.isoformat() if updated_task.completed_at else None,
-            "delete_request": updated_task.delete_request,
-            "owner_id": updated_task.owner_id,
-        }
-
+        serialized_task = TaskInDB(
+            id= updated_task.id,
+            title= updated_task.title,
+            description= updated_task.description,
+            status= updated_task.status,
+            due_date= updated_task.due_date,
+            category= updated_task.category,
+            completed_at= updated_task.completed_at,
+            delete_request= updated_task.delete_request,
+            owner_id= updated_task.owner_id,
+        )
+        
+        task_response_dict = serialized_task.model_dump(exclude_unset=True)
+        task_response_dict['due_date'] = serialized_task.due_date.isoformat() if serialized_task.due_date else None
+        task_response_dict['completed_at'] = serialized_task.completed_at.isoformat() if serialized_task.completed_at else None
+        task_response_dict['category'] = updated_task.category.value
+        
         return JSONResponse(
             status_code=_status.HTTP_200_OK,
-            content=serialized_task
+            content=task_response_dict
         )
 
     except ValueError:
@@ -655,21 +660,26 @@ async def request_delete_task(
         log.info(
             f"{SystemMessages.LOG_TASK_DELETE_REQUEST_SUCCESS.format(task_id=task_id)}"
         )
-        serialized_task = {
-            "id": updated_task.id,
-            "title": updated_task.title,
-            "description": updated_task.description,
-            "status": updated_task.status,
-            "due_date": updated_task.due_date.isoformat() if updated_task.due_date else None,
-            "category": updated_task.category.value if updated_task.category else None,
-            "completed_at": updated_task.completed_at.isoformat() if updated_task.completed_at else None,
-            "delete_request": updated_task.delete_request,
-            "owner_id": updated_task.owner_id,
-        }
-
+        serialized_task = TaskInDB(
+            id= updated_task.id,
+            title= updated_task.title,
+            description= updated_task.description,
+            status= updated_task.status,
+            due_date= updated_task.due_date,
+            category= updated_task.category,
+            completed_at= updated_task.completed_at,
+            delete_request= updated_task.delete_request,
+            owner_id= updated_task.owner_id,
+        )
+        
+        task_response_dict = serialized_task.model_dump(exclude_unset=True)
+        task_response_dict['due_date'] = serialized_task.due_date.isoformat() if serialized_task.due_date else None
+        task_response_dict['completed_at'] = serialized_task.completed_at.isoformat() if serialized_task.completed_at else None
+        task_response_dict['category'] = updated_task.category.value
+        
         return JSONResponse(
             status_code=_status.HTTP_200_OK,
-            content=serialized_task
+            content=task_response_dict
         )
 
     except ValueError:
