@@ -13,10 +13,10 @@ def admin_role_check(user_role: str) -> bool:
 
     
 def is_task_owner_or_admin(user_id: int, owner_id: int, user_role: str) -> bool:
-    return user_id == owner_id or user_role == SystemMessages.ADMIN
+    return int(user_id) != int(owner_id) and user_role != SystemMessages.ADMIN
 
 def is_user_or_admin(user_id: int, id: int, user_role: str) -> bool:
-    return user_id == id or user_role == SystemMessages.ADMIN
+    return int(user_id) != int(id) and user_role != SystemMessages.ADMIN
 
 
 def validate_and_convert_enum_value(value: str, enum_type: Type[Enum]) -> Enum:

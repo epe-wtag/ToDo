@@ -118,21 +118,26 @@ async def read_tasks(
         )
 
         log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
+        serialized_tasks = []
+        for task in tasks:
+            task_response = TaskInDB(
+                id=task.id,
+                title=task.title,
+                description=task.description,
+                status=task.status,
+                due_date=task.due_date,
+                category=task.category.value, 
+                completed_at=task.completed_at,
+                delete_request=task.delete_request,
+                owner_id=task.owner_id
+            )
 
-        serialized_tasks = [
-            {
-                "id": task.id,
-                "title": task.title,
-                "description": task.description,
-                "status": task.status,
-                "due_date": task.due_date.isoformat() if task.due_date else None,
-                "category": task.category.value if task.category else None,
-                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-                "delete_request": task.delete_request,
-                "owner_id": task.owner_id,
-            }
-            for task in tasks
-        ]
+            task_response_dict = task_response.model_dump(exclude_unset=True)
+            task_response_dict['due_date'] = task_response.due_date.isoformat() if task_response.due_date else None
+            task_response_dict['completed_at'] = task_response.completed_at.isoformat() if task_response.completed_at else None
+            task_response_dict['category'] = task.category.value
+            serialized_tasks.append(task_response_dict)
+            
 
         response_content = {
             "tasks": serialized_tasks,
@@ -177,20 +182,25 @@ async def read_delete_request_tasks(
 
             log.info(f"{SystemMessages.LOG_FETCHED_TASKS.format(len(tasks))}")
         
-            serialized_tasks = [
-            {
-                "id": task.id,
-                "title": task.title,
-                "description": task.description,
-                "status": task.status,
-                "due_date": task.due_date.isoformat() if task.due_date else None,
-                "category": task.category.value if task.category else None,
-                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-                "delete_request": task.delete_request,
-                "owner_id": task.owner_id,
-            }
-            for task in tasks
-        ]
+            serialized_tasks = []
+            for task in tasks:
+                task_response = TaskInDB(
+                    id=task.id,
+                    title=task.title,
+                    description=task.description,
+                    status=task.status,
+                    due_date=task.due_date,
+                    category=task.category.value, 
+                    completed_at=task.completed_at,
+                    delete_request=task.delete_request,
+                    owner_id=task.owner_id
+                )
+
+                task_response_dict = task_response.model_dump(exclude_unset=True)
+                task_response_dict['due_date'] = task_response.due_date.isoformat() if task_response.due_date else None
+                task_response_dict['completed_at'] = task_response.completed_at.isoformat() if task_response.completed_at else None
+                task_response_dict['category'] = task.category.value
+                serialized_tasks.append(task_response_dict)
 
         response_content = {
             "tasks": serialized_tasks,
@@ -232,20 +242,25 @@ async def search_tasks(
             db, query, get_current_user.id, admin, skip, limit
         )
         
-        serialized_tasks = [
-            {
-                "id": task.id,
-                "title": task.title,
-                "description": task.description,
-                "status": task.status,
-                "due_date": task.due_date.isoformat() if task.due_date else None,
-                "category": task.category.value if task.category else None,
-                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-                "delete_request": task.delete_request,
-                "owner_id": task.owner_id,
-            }
-            for task in tasks
-        ]
+        serialized_tasks = []
+        for task in tasks:
+            task_response = TaskInDB(
+                id=task.id,
+                title=task.title,
+                description=task.description,
+                status=task.status,
+                due_date=task.due_date,
+                category=task.category.value, 
+                completed_at=task.completed_at,
+                delete_request=task.delete_request,
+                owner_id=task.owner_id
+            )
+
+            task_response_dict = task_response.model_dump(exclude_unset=True)
+            task_response_dict['due_date'] = task_response.due_date.isoformat() if task_response.due_date else None
+            task_response_dict['completed_at'] = task_response.completed_at.isoformat() if task_response.completed_at else None
+            task_response_dict['category'] = task.category.value
+            serialized_tasks.append(task_response_dict)
 
         response_content = {
             "tasks": serialized_tasks,
@@ -290,20 +305,25 @@ async def search_delete_requested_tasks(
         )
 
         log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
-        serialized_tasks = [
-            {
-                "id": task.id,
-                "title": task.title,
-                "description": task.description,
-                "status": task.status,
-                "due_date": task.due_date.isoformat() if task.due_date else None,
-                "category": task.category.value if task.category else None,
-                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-                "delete_request": task.delete_request,
-                "owner_id": task.owner_id,
-            }
-            for task in tasks
-        ]
+        serialized_tasks = []
+        for task in tasks:
+            task_response = TaskInDB(
+                id=task.id,
+                title=task.title,
+                description=task.description,
+                status=task.status,
+                due_date=task.due_date,
+                category=task.category.value, 
+                completed_at=task.completed_at,
+                delete_request=task.delete_request,
+                owner_id=task.owner_id
+            )
+
+            task_response_dict = task_response.model_dump(exclude_unset=True)
+            task_response_dict['due_date'] = task_response.due_date.isoformat() if task_response.due_date else None
+            task_response_dict['completed_at'] = task_response.completed_at.isoformat() if task_response.completed_at else None
+            task_response_dict['category'] = task.category.value
+            serialized_tasks.append(task_response_dict)
 
         response_content = {
             "tasks": serialized_tasks,
@@ -359,20 +379,25 @@ async def filter_tasks(
     
         
         log.info(f"{SystemMessages.LOG_FETCH_TOTAL_TASKS.format(total=total)}")
-        serialized_tasks = [
-            {
-                "id": task.id,
-                "title": task.title,
-                "description": task.description,
-                "status": task.status,
-                "due_date": task.due_date.isoformat() if task.due_date else None,
-                "category": task.category.value if task.category else None,
-                "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-                "delete_request": task.delete_request,
-                "owner_id": task.owner_id,
-            }
-            for task in tasks
-        ]
+        serialized_tasks = []
+        for task in tasks:
+            task_response = TaskInDB(
+                id=task.id,
+                title=task.title,
+                description=task.description,
+                status=task.status,
+                due_date=task.due_date,
+                category=task.category.value, 
+                completed_at=task.completed_at,
+                delete_request=task.delete_request,
+                owner_id=task.owner_id
+            )
+
+            task_response_dict = task_response.model_dump(exclude_unset=True)
+            task_response_dict['due_date'] = task_response.due_date.isoformat() if task_response.due_date else None
+            task_response_dict['completed_at'] = task_response.completed_at.isoformat() if task_response.completed_at else None
+            task_response_dict['category'] = task.category.value
+            serialized_tasks.append(task_response_dict)
 
         response_content = {
             "tasks": serialized_tasks,
@@ -414,21 +439,26 @@ async def read_task(
                 status_code=_status.HTTP_404_NOT_FOUND, detail=SystemMessages.WARNING_TASK_NOT_FOUND
             )
         log.info(f"{SystemMessages.LOG_FETCH_TASK_SUCCESS.format(task_id=task_id)}")
-        serialized_task = {
-            "id": task.id,
-            "title": task.title,
-            "description": task.description,
-            "status": task.status,
-            "due_date": task.due_date.isoformat() if task.due_date else None,
-            "category": task.category.value if task.category else None,
-            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
-            "delete_request": task.delete_request,
-            "owner_id": task.owner_id,
-        }
-
+        serialized_task = TaskInDB(
+            id= task.id,
+            title= task.title,
+            description= task.description,
+            status= task.status,
+            due_date= task.due_date,
+            category= task.category,
+            completed_at= task.completed_at,
+            delete_request= task.delete_request,
+            owner_id= task.owner_id,
+        )
+        
+        task_response_dict = serialized_task.model_dump(exclude_unset=True)
+        task_response_dict['due_date'] = serialized_task.due_date.isoformat() if serialized_task.due_date else None
+        task_response_dict['completed_at'] = serialized_task.completed_at.isoformat() if serialized_task.completed_at else None
+        task_response_dict['category'] = task.category.value
+        
         return JSONResponse(
             status_code=_status.HTTP_200_OK,
-            content=serialized_task
+            content=task_response_dict
         )
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASK} {e}")
@@ -492,10 +522,10 @@ async def update_task(
             owner_id= updated_task.owner_id,
         )
         
-        task_response_dict = serialized_task.dict(exclude_unset=True)
+        task_response_dict = serialized_task.model_dump(exclude_unset=True)
         task_response_dict['due_date'] = serialized_task.due_date.isoformat() if serialized_task.due_date else None
         task_response_dict['completed_at'] = serialized_task.completed_at.isoformat() if serialized_task.completed_at else None
-        task_response_dict['category'] = db_task.category.value  # Include the category value from the database
+        task_response_dict['category'] = db_task.category.value
         
         return JSONResponse(
             status_code=_status.HTTP_200_OK,
