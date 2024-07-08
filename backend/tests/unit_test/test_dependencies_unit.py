@@ -1,12 +1,11 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from fastapi import HTTPException
-
 from app.core.dependency import admin_role_check, check_user_active
 from app.core.security import get_current_user
 from app.model.base import User
 from app.schema.auth import TokenData
+from fastapi import HTTPException
 
 
 @pytest.mark.asyncio

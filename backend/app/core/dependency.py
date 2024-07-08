@@ -2,10 +2,10 @@ from enum import Enum
 from typing import Type
 
 from fastapi import HTTPException, status
+from logger import log
 
 from app.core.constants import SystemMessages
 from app.model.base import User
-from logger import log
 
 
 def admin_role_check(user_role: str) -> bool:

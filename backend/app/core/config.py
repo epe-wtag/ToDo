@@ -3,13 +3,12 @@ import traceback
 
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from logger import log
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-
-from logger import log
 
 load_dotenv()
 

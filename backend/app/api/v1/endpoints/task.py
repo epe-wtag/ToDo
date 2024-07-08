@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Form, HTTPException, Query
 from fastapi import status as _status
 from fastapi.responses import JSONResponse
+from logger import log
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,7 +28,6 @@ from app.schema.task import (
     TaskList,
     TaskUpdate,
 )
-from logger import log
 
 router = APIRouter(
     prefix="/task",
@@ -623,7 +623,12 @@ async def delete_task(
             raise ValueError(SystemMessages.ERROR_PERMISSION_DENIED)
         
         await task_crud.remove(db, id=int(task_id))
-        return Message(message=f"{SystemMessages.SUCCESS_TASK_DELETED} {get_current_user.id}")
+        message = Message(message=f"{SystemMessages.SUCCESS_TASK_DELETED} {get_current_user.id}")
+    
+        return JSONResponse(
+            status_code=_status.HTTP_200_OK,
+            content=message.model_dump(exclude_unset=True)
+        )
     
     except ValueError as e:
         log.warning(f"{SystemMessages.WARNING_UNAUTHORIZED_TASK_UPDATE} {id}")

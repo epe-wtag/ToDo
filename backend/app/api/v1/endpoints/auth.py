@@ -1,8 +1,9 @@
 import json
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
+from logger import log
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,7 +38,6 @@ from app.schema.auth import (
     VerifyMessage,
 )
 from app.util.hash import async_hash_password, verify_password
-from logger import log
 
 router = APIRouter(prefix="/auth", tags=["Authentication:"])
 
@@ -126,13 +126,15 @@ async def verify_email(
         user.is_active = True
         await db.commit()
 
-        response_message = VerifyMessage(message=SystemMessages.SUCCESS_EMAIL_VERIFICATION)
         html_content = templates.TemplateResponse(
             "verification_result.html",
             {"request": request, "verification_result": verification_result},
         )
         
-        return response_message, html_content
+        return HTMLResponse(
+            content=html_content.body.decode("utf-8"),
+            status_code=status.HTTP_200_OK
+        )
             
         
     except Exception:

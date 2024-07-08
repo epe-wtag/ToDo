@@ -1,11 +1,10 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.db.crud.task import CRUDTask
 from app.model.base import Task
 from app.schema.task import TaskCreate, TaskUpdate
+from sqlalchemy.ext.asyncio import AsyncSession
 
 crud_task = CRUDTask(Task)
 

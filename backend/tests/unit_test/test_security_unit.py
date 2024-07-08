@@ -1,8 +1,6 @@
 from unittest.mock import Mock, patch
 
 import pytest
-from fastapi import HTTPException, status
-
 from app.core.dependency import (
     admin_role_check,
     check_user_active,
@@ -10,6 +8,7 @@ from app.core.dependency import (
 )
 from app.model.base import User
 from app.schema.auth import TokenData
+from fastapi import HTTPException, status
 
 
 @pytest.fixture

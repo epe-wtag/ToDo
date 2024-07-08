@@ -35,7 +35,9 @@ class SystemMessages:
     ERROR_USER_ALREADY_EXIST = "Username or email already exists"
     ERROR_UNAUTHORIZED_UPDATE = "Unauthorized attempt to update instance with id: {id}"
     ERROR_UNAUTHORIZED_ATTEMPT = "Unauthorized attempt"
-
+    ERROR_EXPIRED_SESSION = "Session has expired"
+    ERROR_VALIDATION = "Could not validate credentials"
+    
     
     
     # Success messages

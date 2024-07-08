@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
+from logger import log
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
@@ -10,7 +11,6 @@ from app.core.security import (
 from app.db.crud.auth import user_crud
 from app.db.database import get_db
 from app.schema.auth import TokenData, UserInResponse, UserUpdate
-from logger import log
 
 router = APIRouter(prefix="/user", tags=["User:"])
 
