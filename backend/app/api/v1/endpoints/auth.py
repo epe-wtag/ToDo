@@ -225,7 +225,11 @@ async def login(
 async def logout(response: Response):
     log.info(SystemMessages.LOG_LOGGING_OUT_USER)
     response.delete_cookie("token")
-    return LogOutMessage(message=SystemMessages.SUCCESS_LOGGED_OUT)
+    message = LogOutMessage(message=SystemMessages.SUCCESS_LOGGED_OUT)
+    return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=message.model_dump(exclude_unset=True)
+            )
 
 
 @router.post(
@@ -253,7 +257,11 @@ async def forget_password(input: ForgetPassword, db: AsyncSession = Depends(get_
         await send_reset_email(email, reset_token)
         log.info(f"{SystemMessages.SUCCESS_RESET_EMAIL_SENT} to: {email}")
 
-        return ForgetPasswordMessage(message=SystemMessages.SUCCESS_RESET_EMAIL_SENT)
+        message = ForgetPasswordMessage(message=SystemMessages.SUCCESS_RESET_EMAIL_SENT)
+        return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=message.model_dump(exclude_unset=True)
+            )
 
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_SEND_RESET_EMAIL} {e}")
@@ -296,7 +304,11 @@ async def reset_password(
         await db.commit()
         log.info(f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}")
 
-        return ResetPasswordMessage(message=f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}")
+        message = ResetPasswordMessage(message=f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}")
+        return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content=message.model_dump(exclude_unset=True)
+            )
 
     except NoResultFound:
         log.warning(f"{SystemMessages.WARNING_USER_NOT_FOUND_FOR_EMAIL} {email}")
@@ -333,14 +345,18 @@ async def change_password(
         user = await user_crud.get(db, int(user_id))
 
         verify_old_password(user, old_password)
-        check_user_active(user)
+        await check_user_active(user)
 
         hashed_password = async_hash_password(new_password)
         await user_crud.update(db=db, db_obj=user, obj_in={"password": hashed_password})
 
         response.delete_cookie("token")
+        message = PasswordChangeMessage(message=f"{SystemMessages.SUCCESS_PASSWORD_CHANGED} {user_id}")
         log.info(f"{SystemMessages.SUCCESS_PASSWORD_CHANGED} {user_id}")
-        return PasswordChangeMessage(message=f"{SystemMessages.SUCCESS_PASSWORD_CHANGED} {user_id}")
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=message.model_dump(exclude_unset=True)
+        )
 
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_CHANGE_PASSWORD} {e}")
