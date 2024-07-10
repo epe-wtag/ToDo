@@ -235,6 +235,8 @@ const Cards = ({ cards, onDelete }) => {
         return <p className="no-products-message">No Task</p>;
     }
 
+    const today = new Date().toISOString().split('T')[0];
+
     return (
         <div className="cards">
             {cards.map((task, index) => (
@@ -327,7 +329,7 @@ const Cards = ({ cards, onDelete }) => {
                             </div>
                             <div className="edit-modal-form">
                                 <label>Due Date:</label>
-                                <input type="date" value={editedDueDate} onChange={handleDateChange} />
+                                <input type="date" min={today} value={editedDueDate} onChange={handleDateChange} />
                             </div>
                             <div className="edit-modal-form">
                                 <label className="label-cat" htmlFor="category">Priority:</label>

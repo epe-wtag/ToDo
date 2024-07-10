@@ -53,7 +53,7 @@ const CreateTask = () => {
             }
 
 
-            const response = await fetch('/api/v1/task/tasks/', requestOption);
+            const response = await fetch('/api/v1/task/create-tasks/', requestOption);
             if (response.ok) {
                 const data = await response.json();
                 Swal.fire({
@@ -81,6 +81,8 @@ const CreateTask = () => {
             console.error('Error creating task:', error);
         }
     };
+
+    const today = new Date().toISOString().split('T')[0];
 
     return (
         <>
@@ -114,6 +116,7 @@ const CreateTask = () => {
                             <label htmlFor="dueDate">Due Date:</label>
                             <input
                                 type="date"
+                                min={today}
                                 id="dueDate"
                                 value={dueDate}
                                 onChange={handleDateChange}

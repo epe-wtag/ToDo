@@ -30,6 +30,7 @@ class TaskBase(BaseModel):
         from_attributes = True
 
 
+
 class TaskCreate(TaskBase):
     owner_id: int
     
@@ -89,6 +90,7 @@ class TaskInDB(TaskBase):
     
     class Config:
         from_attributes = True  
+
         
     @classmethod
     def from_orm(cls, obj):

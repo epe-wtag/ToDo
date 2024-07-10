@@ -2,6 +2,7 @@ class SystemMessages:
     # Error messages
     ERROR_CREATE_USER = "Failed to create user."
     ERROR_CREATE_USER_DETAIL = "Failed to create user."
+    ERROR_CREATE_USER_FAILED = "Failed Register due to email verification."
     ERROR_RESET_EMAIL = "Failed to send reset email."
     ERROR_RESET_EMAIL_DETAIL = "Failed to send reset email."
     ERROR_UPDATE_USER = "Failed to update user."

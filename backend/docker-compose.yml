@@ -30,8 +30,8 @@ services:
     restart: unless-stopped
     container_name: smtp
     ports:
-      - "8025:8025"
-      - "1025:1025"
+      - "8035:8035"
+      - "1035:1035"
 
 volumes:
   postgres_data1:

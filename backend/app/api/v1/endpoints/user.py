@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
 from logger import log
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,26 +44,8 @@ async def get_user(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=SystemMessages.ERROR_PERMISSION_DENIED,
                 )
-        created_at_iso = user.created_at.isoformat() if user.created_at else None
-        user_response = UserInResponse(
-            id=user.id,
-            email=user.email,
-            username=user.username,
-            first_name=user.first_name,
-            last_name=user.last_name,
-            contact_number=user.contact_number,
-            gender=user.gender,
-            created_at=created_at_iso,
-            is_active=user.is_active,
-        )
-        
-        user_response_dict = user_response.model_dump(exclude_unset=True)
-        user_response_dict['created_at'] = created_at_iso 
-        
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=user_response_dict,
-        )
+
+        return user
 
     except Exception as e:
         log.error(f"Unhandled exception: {e}")
@@ -89,11 +70,10 @@ async def get_user(
 )
 async def update_user(
     id: int,
-    input: UserUpdate,
+    input_data: UserUpdate,
     db: AsyncSession = Depends(get_db),
     get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_ATTEMPT_UPDATE_USER} {id}--{get_current_user.id}")
     try:
         user = await user_crud.get(db, id)
         if not user:
@@ -105,29 +85,11 @@ async def update_user(
 
         if is_user_or_admin(get_current_user.id, id, get_current_user.role):
             raise ValueError(SystemMessages.ERROR_UNAUTHORIZED_ATTEMPT)
-        
-        user_update = input
-        updated_user = await user_crud.update(db, db_obj=user, obj_in=user_update)
+
+        updated_user = await user_crud.update(db, db_obj=user, obj_in=input_data)
         log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")
-        user_response = UserInResponse(
-            id=updated_user.id,
-            email=updated_user.email,
-            username=updated_user.username,
-            first_name=updated_user.first_name,
-            last_name=updated_user.last_name,
-            contact_number=updated_user.contact_number,
-            gender=updated_user.gender,
-            created_at=updated_user.created_at,
-            is_active=updated_user.is_active,
-        )
-        
-        user_response_dict = user_response.model_dump(exclude_unset=True)
-        user_response_dict['created_at'] = user_response.created_at.isoformat() if user_response.created_at else None
-        
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content=user_response_dict,
-        )
+       
+        return updated_user
 
     except ValueError:
         log.warning(f"{SystemMessages.ERROR_UNAUTHORIZED_UPDATE}: {id}")

@@ -4,17 +4,15 @@ from typing import Optional
 from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
 from fastapi.security import HTTPBearer
 from jose import jwt
-from app.core.constants import SystemMessages
 from logger import log
 
 from app.core.config import settings
+from app.core.constants import SystemMessages
 from app.model.base import User
 from app.schema.auth import TokenData
-from app.util.hash import async_hash_password, verify_password
+from app.util.hash import verify_password
 
 app = FastAPI()
-
-
 bearer_scheme = HTTPBearer()
 
 
@@ -30,14 +28,18 @@ def create_access_token(data: dict, secret_key: str = settings.SECRET_KEY) -> st
 
 
 def generate_verification_token(email: str) -> str:
-    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    expiration_time = datetime.now(timezone.utc) + timedelta(
+        minutes=TOKEN_EXPIRE_MINUTES
+    )
     payload = {"email": email, "exp": expiration_time}
     token = jwt.encode(payload, settings.VERIFICATION_KEY, algorithm=ALGORITHM)
     return token
 
 
 def generate_reset_token(email: str) -> str:
-    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    expiration_time = datetime.now(timezone.utc) + timedelta(
+        minutes=TOKEN_EXPIRE_MINUTES
+    )
     payload = {"email": email, "exp": expiration_time}
     token = jwt.encode(payload, settings.RESET_PASSWORD_KEY, algorithm=ALGORITHM)
     return token
@@ -116,4 +118,3 @@ def verify_reset_token(email: str, token: str) -> bool:
 
 def get_current_user(token_data: TokenData = Depends(get_token_data)) -> str:
     return token_data.id
-

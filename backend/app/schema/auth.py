@@ -115,23 +115,28 @@ class TokenData(BaseModel):
 
 
 class LogInMessage(BaseModel):
+    id: int
+    is_admin: bool
+
+
+class BaseMessage(BaseModel):
     message: str
 
 
-class LogOutMessage(BaseModel):
-    message: str
+class LogOutMessage(BaseMessage):
+    pass
 
 
-class ForgetPasswordMessage(BaseModel):
-    message: str
+class ForgetPasswordMessage(BaseMessage):
+    pass
 
 
-class ResetPasswordMessage(BaseModel):
-    message: str
+class ResetPasswordMessage(BaseMessage):
+    pass
 
 
-class VerifyMessage(BaseModel):
-    message: str
+class VerifyMessage(BaseMessage):
+    pass
 
 
 class UserPassReset(BaseModel):
@@ -149,5 +154,5 @@ class ForgetPassword(BaseModel):
     email: EmailStr
 
 
-class PasswordChangeMessage(BaseModel):
-    message: str
+class PasswordChangeMessage(BaseMessage):
+    pass
