@@ -2,6 +2,7 @@ class SystemMessages:
     # Error messages
     ERROR_CREATE_USER = "Failed to create user."
     ERROR_CREATE_USER_DETAIL = "Failed to create user."
+    ERROR_CREATE_USER_FAILED = "Failed Register due to email verification."
     ERROR_RESET_EMAIL = "Failed to send reset email."
     ERROR_RESET_EMAIL_DETAIL = "Failed to send reset email."
     ERROR_UPDATE_USER = "Failed to update user."
@@ -32,7 +33,14 @@ class SystemMessages:
     ERROR_FAILED_TO_UPDATE_TASK_STATUS = "Failed to update task status:"
     ERROR_FAILED_TO_DELETE_TASK = "Failed to delete task:"
     ERROR_FAILED_TO_REQUEST_DELETE_TASK = "Failed to request delete task:"
-
+    ERROR_USER_ALREADY_EXIST = "Username or email already exists"
+    ERROR_UNAUTHORIZED_UPDATE = "Unauthorized attempt to update instance with id: {id}"
+    ERROR_UNAUTHORIZED_ATTEMPT = "Unauthorized attempt"
+    ERROR_EXPIRED_SESSION = "Session has expired"
+    ERROR_VALIDATION = "Could not validate credentials"
+    
+    
+    
     # Success messages
     SUCCESS_USER_CREATED = "User created successfully."
     SUCCESS_PASSWORD_RESET_EMAIL_SENT = "Password reset email sent successfully."
@@ -45,6 +53,9 @@ class SystemMessages:
     SUCCESS_RESET_EMAIL_SENT = "Password reset email sent successfully"
     SUCCESS_PASSWORD_RESETFUL = "Password reset successful for email:"
     SUCCESS_PASSWORD_CHANGED = "Password changed successfully for user_id:"
+    SUCCESS_EMAIL_VERIFICATION = "Email verification successful"
+    SUCCESS_TASK_DELETED = "Task deleted successfully by"
+
 
     # Log messages
     LOG_ATTEMPT_UPDATE_USER = "Attempting to update user with id:"
@@ -92,5 +103,12 @@ class SystemMessages:
     WARNING_INVALID_RESET_TOKEN = "Invalid reset token for email:"
     WARNING_USER_NOT_FOUND_FOR_EMAIL = "User not found for email:"
     WARNING_TASK_NOT_FOUND = "Task with id {task_id} not found"
+    WARNING_TASK_NOT_FOUND = "Task not found"
+    WARNING_UNAUTHORIZED_TASK_UPDATE = "Unauthorized attempt to update task"
+
+    
+    #Roles
+    ADMIN = "admin"
+    USER = "user"
 
 

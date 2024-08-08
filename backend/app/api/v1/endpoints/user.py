@@ -1,14 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from logger import log
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
+from app.core.dependency import is_user_or_admin
 from app.core.security import (
     get_token_data,
 )
-from app.db.crud.crud_auth import user_crud
+from app.db.crud.auth import user_crud
 from app.db.database import get_db
-from app.schema.auth_schema import TokenData, UserInResponse, UserUpdate
-from logger import log
+from app.schema.auth import TokenData, UserInResponse, UserUpdate
 
 router = APIRouter(prefix="/user", tags=["User:"])
 
@@ -29,25 +30,23 @@ router = APIRouter(prefix="/user", tags=["User:"])
 async def get_user(
     id: int,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
     user = await user_crud.get(db, id)
     try:
-        if user:
-            if id == int(token_data.id) or token_data.role == 'admin':
-                return user
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail=SystemMessages.ERROR_PERMISSION_DENIED,
-                )
-        else:
+        if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
-    except HTTPException as e:
-        raise e
+        if is_user_or_admin(get_current_user.id, id, get_current_user.role):
+            raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=SystemMessages.ERROR_PERMISSION_DENIED,
+                )
+
+        return user
+
     except Exception as e:
         log.error(f"Unhandled exception: {e}")
         raise HTTPException(
@@ -71,11 +70,10 @@ async def get_user(
 )
 async def update_user(
     id: int,
-    input: UserUpdate,
+    input_data: UserUpdate,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_ATTEMPT_UPDATE_USER} {id}--{token_data.id}")
     try:
         user = await user_crud.get(db, id)
         if not user:
@@ -85,20 +83,19 @@ async def update_user(
                 detail=f"{SystemMessages.ERROR_USER_NOT_FOUND_ID} {id}",
             )
 
-        if id == int(token_data.id) or token_data.role=='admin':
-            
-            user_update = input
-            updated_user = await user_crud.update(db, db_obj=user, obj_in=user_update)
-            log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")
-            return updated_user
-        else:
-            raise ValueError("Unauthorized attempt")
-        
+        if is_user_or_admin(get_current_user.id, id, get_current_user.role):
+            raise ValueError(SystemMessages.ERROR_UNAUTHORIZED_ATTEMPT)
+
+        updated_user = await user_crud.update(db, db_obj=user, obj_in=input_data)
+        log.success(f"{SystemMessages.LOG_USER_UPDATED_SUCCESSFULLY}")
+       
+        return updated_user
+
     except ValueError:
-        log.warning(f"Unauthorized attempt to update instance with id {id}")
+        log.warning(f"{SystemMessages.ERROR_UNAUTHORIZED_UPDATE}: {id}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You do not have permission to update this resource"
+            detail=SystemMessages.ERROR_PERMISSION_DENIED,
         )
 
     except Exception as e:

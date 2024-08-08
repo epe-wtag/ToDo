@@ -1,14 +1,15 @@
 from unittest.mock import AsyncMock, MagicMock, patch
-from fastapi.testclient import TestClient
-from httpx import AsyncClient
+
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import status
 from app.core.constants import SystemMessages
 from app.core.security import create_access_token, generate_reset_token
-from app.model.base_model import User
+from app.model.base import User
 from app.util.hash import async_hash_password
+from fastapi import status
+from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from main import app
+from sqlalchemy.ext.asyncio import AsyncSession
 
 client = TestClient(app)
 

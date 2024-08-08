@@ -2,13 +2,13 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from fastapi import HTTPException, status
-from sqlalchemy import String, cast, desc, func, or_, select
+from logger import log
+from sqlalchemy import String, cast, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.crud.crud_base import CRUDBase
-from app.model.base_model import Category, Task, User
-from app.schema.task_schema import TaskCreate, TaskUpdate
-from logger import log
+from app.db.crud.base import CRUDBase
+from app.model.base import Category, Task, User
+from app.schema.task import TaskCreate, TaskUpdate
 
 
 class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
@@ -24,36 +24,36 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         task = [row[0] for row in rows][0]
         return task
 
+
     async def get_multi_with_query(
         self,
         db: AsyncSession,
         *,
         user_id: Optional[int],
-        query: Optional[str],
+        title_query: Optional[str],
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Task], int]:
         base_query = select(Task)
         if user_id is not None:
             base_query = base_query.filter(Task.owner_id == user_id)
-        if query:
-            base_query = base_query.filter(Task.title.ilike(f"%{query}%"))
-
-        total = await db.scalar(select(func.count()).select_from(base_query.subquery()))
-        result = await db.execute(
-            base_query.order_by(desc(Task.id)).offset(skip).limit(limit)
-        )
-        rows = result.fetchall()
-        tasks = [row[0] for row in rows]
+        if title_query:
+            base_query = base_query.filter(Task.title.ilike(f"%{title_query}%"))
+        base_query = base_query.order_by(desc(Task.id))
+        
+        all_tasks = await self.get_multi(db, query=base_query)
+        
+        total = len(all_tasks)
+        tasks = all_tasks[skip:skip + limit]
+        
         return tasks, total
+    
+    
 
     async def create(self, db: AsyncSession, *, obj_in: TaskCreate) -> Task:
-        create_data = obj_in.dict()
+        create_data = dict(obj_in)
         db_obj = Task(**create_data)
-        db.add(db_obj)
-        await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
+        return await super().create(db, obj_in=db_obj)
 
     async def update(
         self,
@@ -62,32 +62,22 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         db_obj: Task,
         obj_in: Union[TaskUpdate, Dict[str, Any]],
     ) -> Task:
-        if isinstance(obj_in, dict):
-            update_data = obj_in
-        else:
-            update_data = obj_in.dict(exclude_unset=True)
-
-        return await super().update(db, db_obj=db_obj, obj_in=update_data)
+        return await super().update(db, db_obj=db_obj, obj_in=obj_in)
 
     async def get_delete_requested_tasks(
         self, db: AsyncSession, skip: int = 0, limit: int = 100
     ) -> Tuple[List[Task], int]:
         base_query = select(Task).filter(Task.delete_request == True)
-        total = await db.scalar(
-            select(func.count(Task.id)).filter(base_query.whereclause)
-        )
-        result = await db.execute(base_query.offset(skip).limit(limit))
-
-        rows = result.fetchall()
-        tasks = [row[0] for row in rows]
+        base_query = base_query.order_by(desc(Task.id))
+        
+        all_tasks = await self.get_multi(db, query=base_query)
+        tasks = all_tasks[skip:skip + limit]
+        
+        total = len(all_tasks)
         return tasks, total
 
     async def remove(self, db: AsyncSession, *, id: int) -> Task:
-        obj = await self.get(db, id)
-        if obj:
-            await db.delete(obj)
-            await db.commit()
-        return obj
+        return await super().remove(db, id=id)
 
     async def search(
         self,
@@ -98,7 +88,7 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Task], int]:
-        base_query = select(Task)
+        base_query = select(Task).join(User, Task.owner_id == User.id)
         if not admin:
             base_query = base_query.filter(Task.owner_id == int(user_id))
         if query:
@@ -107,17 +97,19 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
                     Task.title.ilike(f"%{query}%"),
                     Task.description.ilike(f"%{query}%"),
                     cast(Task.due_date, String).ilike(f"%{query}%"),
+                    User.username.ilike(f"%{query}%"),
+                    User.first_name.ilike(f"%{query}%"),
+                    User.last_name.ilike(f"%{query}%"),
                 )
             )
-        total = await db.scalar(
-            select(func.count(Task.id)).filter(base_query.whereclause)
-        )
-        paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
-        result = await db.execute(paginated_query)
-        rows = result.fetchall()
-        tasks = [row[0] for row in rows]
+        base_query = base_query.order_by(desc(Task.id))
+        
+        all_tasks = await self.get_multi(db, query=base_query)
+        tasks = all_tasks[skip:skip + limit]
+        
+        total = len(all_tasks)
         return tasks, total
-    
+
     async def search_delete_requests(
         self,
         db: AsyncSession,
@@ -127,26 +119,29 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
         skip: int = 0,
         limit: int = 100,
     ) -> Tuple[List[Task], int]:
-        base_query = select(Task).join(User, Task.owner_id == User.id).filter(Task.delete_request == True)
+        base_query = (
+            select(Task)
+            .join(User, Task.owner_id == User.id)
+            .filter(Task.delete_request == True)
+        )
 
         if not admin:
             base_query = base_query.filter(Task.owner_id == int(user_id))
-            
+
         if query:
             user_filters = or_(
                 User.username.ilike(f"%{query}%"),
                 User.first_name.ilike(f"%{query}%"),
-                User.last_name.ilike(f"%{query}%")
+                User.last_name.ilike(f"%{query}%"),
             )
             base_query = base_query.filter(user_filters)
+
+        base_query = base_query.order_by(desc(Task.id))
         
-        total = await db.scalar(
-            select(func.count(Task.id)).filter(base_query.whereclause)
-        )
-        paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
-        result = await db.execute(paginated_query)
-        rows = result.fetchall()
-        tasks = [row[0] for row in rows]
+        all_tasks = await self.get_multi(db, query=base_query)
+        tasks = all_tasks[skip:skip + limit]
+        
+        total = len(all_tasks)
         return tasks, total
 
     async def filter_tasks(
@@ -195,19 +190,12 @@ class CRUDTask(CRUDBase[Task, TaskCreate, TaskUpdate]):
                 base_query = base_query.filter(Task.due_date <= parsed_due_date)
                 log.info(f"Applied due_date filter: {parsed_due_date}")
 
-            total = await db.scalar(
-                select(func.count()).select_from(base_query.subquery())
-            )
-            log.info(f"Total count: {total}")
-
-            paginated_query = base_query.order_by(Task.id).offset(skip).limit(limit)
-            log.info(f"Pagination: offset={skip}, limit={limit}")
-
-            result = await db.execute(paginated_query)
-            rows = result.fetchall()
-            tasks = [row[0] for row in rows]
-
-            log.info(f"Filtered {len(tasks)} tasks")
+            base_query = base_query.order_by(desc(Task.id))
+        
+            all_tasks = await self.get_multi(db, query=base_query)
+            tasks = all_tasks[skip:skip + limit]
+            
+            total = len(all_tasks)
             return tasks, total
         except Exception as e:
             log.error(f"Failed to filter tasks: {e}")

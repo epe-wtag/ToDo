@@ -50,7 +50,7 @@ const Cards = ({ cards, onDelete }) => {
 
         setEditedTitle(task.title);
         setEditedDescription(task.description);
-        setEditedDueDate(task.due_date);
+        setEditedDueDate(task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '');
         setCategory(task.category);
     };
 
@@ -118,27 +118,77 @@ const Cards = ({ cards, onDelete }) => {
     const editTask = async (e) => {
         e.preventDefault();
 
-        const formData = new FormData();
-        formData.append('title', editedTitle);
-        formData.append('description', editedDescription);
-        formData.append('due_date', editedDueDate);
-        formData.append('category', category);
-        formData.append('owner_id', selectedCard.owner_id);
+        const data = {
+            title: editedTitle,
+            description: editedDescription,
+            due_date: editedDueDate,
+            category: category,
+            owner_id: selectedCard.owner_id
+          };
 
         try {
             const response = await fetch(`/api/v1/task/tasks/${selectedCard.id}`, {
                 method: 'PUT',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json',
+                  },
+                body: JSON.stringify(data),
             });
 
             if (response.ok) {
                 setShowEditModal(false);
                 onDelete();
+                toast.success('Task updated successfully');
             } else {
+                const errorData = await response.json();
+                switch (response.status) {
+                    case 422:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Validation Error',
+                            text: errorData.detail.includes('due_date') ? 
+                                'Due date must be greater than the current date.' : 
+                                'Invalid data. Please check your input and try again.',
+                        });
+                        break;
+                    case 404:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Not Found',
+                            text: 'Task not found.',
+                        });
+                        break;
+                    case 401:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Unauthorized',
+                            text: 'You do not have permission to update this resource.',
+                        });
+                        break;
+                    case 304:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Not Modified',
+                            text: 'Task could not be updated. Please try again later.',
+                        });
+                        break;
+                    default:
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: 'Failed to edit the task. Please try again later.',
+                        });
+                        break;
+                }
                 console.error('Failed to edit the task:', response.statusText);
             }
         } catch (error) {
             console.error('Error editing the task:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: 'Failed to edit the task. Please try again later.',
+            });
         }
     };
 
@@ -165,10 +215,27 @@ const Cards = ({ cards, onDelete }) => {
         }
     };
 
+    const handleDateChange = (e) => {
+        const selectedDate = e.target.value;
+        const currentDate = new Date().toISOString().split('T')[0];
+
+        if (selectedDate < currentDate) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Due Date',
+                text: 'Due date cannot be a past date. Please select a valid date.',
+            });
+        } else {
+            setEditedDueDate(selectedDate);
+        }
+    };
+
 
     if (!Array.isArray(cards)) {
         return <p className="no-products-message">No Task</p>;
     }
+
+    const today = new Date().toISOString().split('T')[0];
 
     return (
         <div className="cards">
@@ -180,16 +247,16 @@ const Cards = ({ cards, onDelete }) => {
 
                     <div className="card-image-container">
                         {task.status === true ? (
-                            <img src={complete} height="150px" width="150px" className='imageClass' alt={task.status} />
+                            <img src={complete} height="120px" width="120px" className='imageClass' alt={task.status} />
                         ) : (
                             task.due_date && new Date(task.due_date) < new Date() ? (
-                                <img src={incomplete} height="150px" width="150px" className='imageClass' alt={task.status} />
+                                <img src={incomplete} height="120px" width="120px" className='imageClass' alt={task.status} />
                             ) : (
-                                <img src={pending} height="150px" width="150px" className='imageClass' alt={task.status} />
+                                <img src={pending} height="120px" width="120px" className='imageClass' alt={task.status} />
                             )
                         )}
                     </div>
-                    <h3 className="truncated-description">{task.title}</h3>
+                    <h3 className="truncated-description">{task.id} - {task.title}</h3>
                     <hr />
                     <p className="truncated-description">{task.description}</p>
                     {task && task.due_date !== null && (
@@ -220,8 +287,8 @@ const Cards = ({ cards, onDelete }) => {
                         </div>
 
                         <hr />
-                        <h3>{selectedCard.title}</h3>
-                        <p className='modal-description'>{selectedCard.description}</p>
+                        <h3>Title:  {selectedCard.title}</h3>
+                        <p className='modal-description'>Details:  {selectedCard.description}</p>
                         <hr />
 
                         <div className="card-buttons">
@@ -262,7 +329,7 @@ const Cards = ({ cards, onDelete }) => {
                             </div>
                             <div className="edit-modal-form">
                                 <label>Due Date:</label>
-                                <input type="date" value={editedDueDate} onChange={(e) => setEditedDueDate(e.target.value)} />
+                                <input type="date" min={today} value={editedDueDate} onChange={handleDateChange} />
                             </div>
                             <div className="edit-modal-form">
                                 <label className="label-cat" htmlFor="category">Priority:</label>

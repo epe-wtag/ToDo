@@ -1,9 +1,15 @@
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
+from app.core.dependency import (
+    admin_role_check,
+    check_user_active,
+    validate_and_convert_enum_value,
+)
+from app.model.base import User
+from app.schema.auth import TokenData
 from fastapi import HTTPException, status
-from app.core.dependency import admin_role_check, check_user_active, validate_and_convert_enum_value
-from app.model.base_model import User
-from app.schema.auth_schema import TokenData
+
 
 @pytest.fixture
 def mock_get_token_data():

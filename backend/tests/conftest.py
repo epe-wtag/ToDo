@@ -1,12 +1,12 @@
 from unittest.mock import patch
+
+import pytest
+from app.db.database import get_db
+from app.model.base import Base
 from fastapi.testclient import TestClient
+from main import app
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.model.base_model import Base
-import pytest
-
-from main import app
-from app.db.database import get_db
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 

@@ -1,16 +1,15 @@
 from datetime import datetime, timezone
 from unittest.mock import MagicMock, patch
-from fastapi.testclient import TestClient
+
 import pytest
-
-from fastapi import status
 from app.core.constants import SystemMessages
-from app.schema.auth_schema import TokenData
-from main import app
-from app.model.base_model import User
-from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import create_access_token
-
+from app.model.base import User
+from app.schema.auth import TokenData
+from fastapi import status
+from fastapi.testclient import TestClient
+from main import app
+from sqlalchemy.ext.asyncio import AsyncSession
 
 client = TestClient(app)
 

@@ -158,6 +158,7 @@ const Profile = () => {
           <h2 className="h2-text">My Profile</h2>
           <Link onClick={toggleModal} className="edit-icon-link">
             <span className="edit-icon" role="img" aria-label="Emoji">🖊️</span>
+            <span className="edit-icon-text">Edit</span>
           </Link>
         </div>
         <hr />

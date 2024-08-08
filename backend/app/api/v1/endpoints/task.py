@@ -1,22 +1,32 @@
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi import APIRouter, Depends, Form, HTTPException, Query
+from fastapi import status as _status
+from logger import log
+from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
 from app.core.dependency import (
     admin_role_check,
+    is_task_owner_or_admin,
     validate_and_convert_enum_value,
 )
 from app.core.security import get_token_data
-from app.db.crud.crud_task import task_crud
+from app.db.crud.task import task_crud
 from app.db.database import get_db
-from app.model.base_model import Category
-from app.schema.auth_schema import TokenData
-from app.schema.task_schema import Message, TaskBase, TaskCreate, TaskInDB, TaskList
-from logger import log
+from app.model.base import Category
+from app.schema.auth import TokenData
+from app.schema.task import (
+    Message,
+    TaskBase,
+    TaskCreate,
+    TaskInDB,
+    TaskList,
+    TaskUpdate,
+)
 
 router = APIRouter(
     prefix="/task",
@@ -25,31 +35,31 @@ router = APIRouter(
 
 
 @router.post(
-    "/tasks/",
+    "/create-tasks/",
     response_model=TaskInDB,
-    status_code=status.HTTP_201_CREATED,
+    status_code=_status.HTTP_201_CREATED,
     description="Create a new task",
 )
 async def create_task(
-    input: TaskBase,
+    input_data: TaskBase,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
     try:
         task_data = TaskCreate(
-            title=input.title,
-            description=input.description,
-            status=input.status,
-            due_date=datetime.fromisoformat(str(input.due_date)) if input.due_date else None,
-            category=input.category,
-            completed_at=datetime.fromisoformat(str(input.completed_at)) if input.completed_at else None,
-            owner_id=token_data.id,
+            title=input_data.title,
+            description=input_data.description,
+            status=input_data.status,
+            due_date=datetime.fromisoformat(str(input_data.due_date)) if input_data.due_date else None,
+            category=input_data.category,
+            completed_at=datetime.fromisoformat(str(input_data.completed_at)) if input_data.completed_at else None,
+            owner_id=get_current_user.id,
         )
 
         db_task = await task_crud.create(db, obj_in=task_data)
 
-        log.info(f"{SystemMessages.LOG_TASK_CREATED_SUCCESSFULLY} {db_task.id}")
         return db_task
+
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_CREATE_TASK} {e}")
         raise HTTPException(
@@ -58,34 +68,35 @@ async def create_task(
         )
 
 
-@router.get("/tasks/", response_model=TaskList, status_code=status.HTTP_200_OK)
+@router.get(
+    "/tasks/", 
+    response_model=TaskList, 
+    status_code=_status.HTTP_200_OK
+)
 async def read_tasks(
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, ge=1),
     query: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(
-        f"{SystemMessages.LOG_ATTEMPT_FETCH_TASKS.format(query=query, skip=skip, limit=limit)}"
-    )
+    
     try:
-        admin = token_data.role == "admin"
+        admin = admin_role_check(get_current_user.role)
+        
         tasks, total = await task_crud.get_multi_with_query(
             db=db,
-            user_id=int(token_data.id) if not admin else None,
-            query=query,
+            user_id=int(get_current_user.id) if not admin else None,
+            title_query=query,
             skip=skip,
             limit=limit,
         )
-
-        log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
-
         return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
+        
     except Exception as e:
-        log.error(f"Error occurred while fetching tasks: {e}")
+        log.error(f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASKS} {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASKS} {str(e)}",
         )
 
@@ -93,112 +104,119 @@ async def read_tasks(
 @router.get(
     "/delete-requested-tasks/",
     response_model=TaskList,
-    status_code=status.HTTP_200_OK,
+    status_code=_status.HTTP_200_OK,
 )
 async def read_delete_request_tasks(
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, ge=1),
     query: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(
-        f"{SystemMessages.LOG_FETCH_DELETE_REQUEST_TASKS.format(skip=skip, limit=limit)}"
-    )
     try:
-        if token_data.role == "admin":
+        admin = admin_role_check(get_current_user.role)
+        if admin:
             tasks, total = await task_crud.get_delete_requested_tasks(
                 db, skip=skip, limit=limit
             )
 
             log.info(f"{SystemMessages.LOG_FETCHED_TASKS.format(len(tasks))}")
-            return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
+ 
+        
+        return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
+        
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASKS} {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASKS} {str(e)}",
         )
 
 
-@router.get("/search/", response_model=TaskList, status_code=status.HTTP_200_OK)
+@router.get(
+    "/search/", 
+    response_model=TaskList, 
+    status_code=_status.HTTP_200_OK)
 async def search_tasks(
     query: str,
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, ge=1),
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(
-        f"{SystemMessages.LOG_FETCH_SEARCH_TASKS.format(query=query, skip=skip, limit=limit)}"
-    )
     try:
-        admin = admin_role_check(token_data.role)
+        admin = admin_role_check(get_current_user.role)
 
         tasks, total = await task_crud.search(
-            db, query, token_data.id, admin, skip, limit
+            db, query, get_current_user.id, admin, skip, limit
         )
-
-        log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
-        return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
+        
+        
+        return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
+    
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {str(e)}",
         )
-        
-        
-@router.get("/search-delete-requested-tasks/", response_model=TaskList, status_code=status.HTTP_200_OK)
+
+
+@router.get(
+    "/search-delete-requested-tasks/",
+    response_model=TaskList,
+    status_code=_status.HTTP_200_OK,
+)
 async def search_delete_requested_tasks(
     query: str,
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, ge=1),
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(
-        f"{SystemMessages.LOG_FETCH_SEARCH_TASKS.format(query=query, skip=skip, limit=limit)}"
-    )
+
     try:
-        admin = admin_role_check(token_data.role)
+        admin = admin_role_check(get_current_user.role)
 
         tasks, total = await task_crud.search_delete_requests(
-            db, query, token_data.id, admin, skip, limit
+            db, query, get_current_user.id, admin, skip, limit
         )
 
         log.info(f"{SystemMessages.LOG_FETCHED_TASKS}: {total}")
-        return {"tasks": tasks, "total": int(total), "skip": skip, "limit": limit}
+    
+        
+        return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
+        
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_SEARCH_TASKS} {str(e)}",
         )
 
 
-@router.get("/filter/", response_model=TaskList, status_code=status.HTTP_200_OK)
+@router.get(
+    "/filter/", 
+    response_model=TaskList, 
+    status_code=_status.HTTP_200_OK
+)
 async def filter_tasks(
     task_status: Optional[str] = None,
     category: Optional[str] = None,
     due_date: Optional[str] = None,
-    skip: int = 0,
-    limit: int = 8,
+    skip: int = Query(0, le=5000),
+    limit: int = Query(8, ge=1),
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
     try:
-        admin = admin_role_check(token_data.role)
-        
+        admin = admin_role_check(get_current_user.role)
 
-        log.info(
-            f"{SystemMessages.LOG_FETCH_FILTER_TASKS.format(task_status=task_status, category=category, due_date=due_date, skip=skip, limit=limit, user_id=token_data.id, user_role=token_data.role)}"
-        )
 
         tasks, total = await task_crud.filter_tasks(
             db=db,
-            user_id=token_data.id,
-            user_role=token_data.role,
+            user_id=get_current_user.id,
+            user_role=get_current_user.role,
             admin=admin,
             task_status=task_status,
             category=category,
@@ -206,26 +224,30 @@ async def filter_tasks(
             skip=skip,
             limit=limit,
         )
+    
+        
         log.info(f"{SystemMessages.LOG_FETCH_TOTAL_TASKS.format(total=total)}")
+    
         return {"tasks": tasks, "total": total, "skip": skip, "limit": limit}
-    except HTTPException as http_err:
-        log.error(f"HTTP Exception: {http_err}")
-        raise http_err
+        
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_FILTER_TASKS} {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_FILTER_TASKS} {str(e)}",
         )
 
 
-@router.get("/tasks/{task_id}", response_model=TaskInDB, status_code=status.HTTP_200_OK)
+@router.get(
+    "/tasks/{task_id}", 
+    response_model=TaskInDB, 
+    status_code=_status.HTTP_200_OK
+)
 async def read_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_FETCH_TASK_BY_ID.format(task_id=task_id)}")
     try:
         task = await task_crud.get_by_id(db=db, id=task_id)
         if not task:
@@ -233,191 +255,179 @@ async def read_task(
                 f"{SystemMessages.WARNING_TASK_NOT_FOUND.format(task_id=task_id)}"
             )
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
+                status_code=_status.HTTP_404_NOT_FOUND, detail=SystemMessages.WARNING_TASK_NOT_FOUND
             )
         log.info(f"{SystemMessages.LOG_FETCH_TASK_SUCCESS.format(task_id=task_id)}")
-        return task
+     
+        return task 
+    
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASK} {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_FETCH_TASK} {str(e)}",
         )
 
 
-@router.put("/tasks/{task_id}", status_code=status.HTTP_200_OK, response_model=TaskInDB)
+@router.put(
+    "/tasks/{task_id}", 
+    response_model=TaskInDB,
+    status_code=_status.HTTP_200_OK, 
+)
 async def update_task(
     task_id: int,
-    owner_id: int = Form(...),
-    title: str = Form(...),
-    description: str = Form(...),
-    category: str = Form(...),
-    due_date: datetime = Form(...),
+    task_input: TaskUpdate,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_UPDATE_TASK_BY_ID.format(task_id=task_id)}")
+    
+    owner_id = task_input.owner_id
+    title = task_input.title
+    description = task_input.description
+    category = task_input.category
+    due_date = task_input.due_date
+    
+    db_task = await task_crud.get_by_id(db=db, id=task_id)
+    if not db_task:
+        log.warning(f"{SystemMessages.WARNING_TASK_NOT_FOUND.format(task_id=task_id)}")
+        raise HTTPException(status_code=_status.HTTP_404_NOT_FOUND, detail=SystemMessages.WARNING_TASK_NOT_FOUND)
+    
+    if is_task_owner_or_admin(get_current_user.id, db_task.owner_id, get_current_user.role):
+        log.warning(f"{SystemMessages.WARNING_UNAUTHORIZED_TASK_UPDATE} with id: {task_id} by user: {get_current_user.id}")
+        raise HTTPException(status_code=_status.HTTP_401_UNAUTHORIZED, detail=SystemMessages.ERROR_PERMISSION_DENIED)
+    
     try:
-        db_task = await task_crud.get_by_id(db=db, id=task_id)
-        if not db_task:
-            log.warning(
-                f"{SystemMessages.WARNING_TASK_NOT_FOUND.format(task_id=task_id)}"
-            )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Task not found"
-            )
-        else:
-            if (
-                int(token_data.id) == int(db_task.owner_id)
-                or token_data.role == "admin"
-            ):
-                category_enum = validate_and_convert_enum_value(category, Category)
-                task_data = {
-                    "title": title,
-                    "description": description,
-                    "due_date": due_date,
-                    "category": category_enum,
-                    "owner_id": owner_id,
-                }
-
-                updated_task = await task_crud.update(
-                    db=db,
-                    db_obj=db_task,
-                    obj_in=task_data,
-                )
-                log.info(
-                    f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}"
-                )
-                return updated_task
-
-            else:
-                raise ValueError("Unauthorized attempt")
-
-    except ValueError:
-        log.warning(f"Unauthorized attempt to update instance with id: {token_data.id}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You do not have permission to update this resource",
+        category_enum = validate_and_convert_enum_value(category.value, Category)
+        updated_data = TaskUpdate(
+            owner_id=owner_id, 
+            title=title, 
+            description=description, 
+            category=category_enum, 
+            due_date=due_date
         )
-
+        task_data = updated_data.model_dump(exclude_unset=True)
+        updated_task = await task_crud.update(db=db, db_obj=db_task, obj_in=task_data)
+        log.info(f"{SystemMessages.LOG_TASK_UPDATED_SUCCESSFULLY.format(task_id=task_id)}")
+        
+        return updated_task
+    
+    except ValidationError as ve:
+        log.error(f"Validation error: {ve}")
+        raise HTTPException(status_code=_status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except SQLAlchemyError as e:
         log.error(f"Database error: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK} {str(e)}",
-        )
+        raise HTTPException(status_code=_status.HTTP_304_NOT_MODIFIED, detail=f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK} {str(e)}")
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK} {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK} {str(e)}",
-        )
+        raise HTTPException(status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK} {str(e)}")
+
 
 
 @router.put(
-    "/change-status/{task_id}", response_model=TaskInDB, status_code=status.HTTP_200_OK
+    "/change-status/{task_id}", 
+    response_model=TaskInDB, 
+    status_code=_status.HTTP_200_OK
 )
 async def update_task_status(
     task_id: int,
     status: bool = Form(...),
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(
-        f"{SystemMessages.LOG_UPDATE_TASK_STATUS.format(task_id=task_id, status=status)}"
-    )
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        if int(token_data.id) == int(db_task.owner_id) or token_data.role == "admin":
-            updated_task = await task_crud.update(
-                db, db_obj=db_task, obj_in={"status": status}
-            )
-            log.info(
-                f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}"
-            )
-            return updated_task
-        else:
-            raise ValueError("Unauthorized attempt")
+        if is_task_owner_or_admin(get_current_user.id, db_task.owner_id, get_current_user.role):
+            raise ValueError(SystemMessages.ERROR_UNAUTHORIZED_ATTEMPT)
+        updated_task = await task_crud.update(
+            db, db_obj=db_task, obj_in={"status": status}
+        )
+        log.info(
+            f"{SystemMessages.LOG_TASK_STATUS_UPDATED_SUCCESSFULLY.format(task_id=task_id)}"
+        )
+   
+        return updated_task
 
     except ValueError:
-        log.warning(f"Unauthorized attempt to update instance with id: {token_data.id}")
+        log.warning(f"{SystemMessages.WARNING_UNAUTHORIZED_TASK_UPDATE} with id: {task_id} by user: {get_current_user.id}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You do not have permission to update this resource",
+            status_code=_status.HTTP_401_UNAUTHORIZED,
+            detail=SystemMessages.ERROR_PERMISSION_DENIED,
         )
 
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK_STATUS} {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_UPDATE_TASK_STATUS} {str(e)}",
         )
 
 
 @router.delete(
-    "/tasks/{task_id}", status_code=status.HTTP_200_OK, response_model=Message
+    "/tasks/{task_id}", 
+    response_model=Message,
+    status_code=_status.HTTP_200_OK
 )
 async def delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_DELETING_TASK.format(task_id=task_id)}")
     try:
-        if token_data.role == "admin":
-            await task_crud.remove(db, id=int(task_id))
-
-            return {"message": f"Task deleted successfully by {token_data.id}"}
-        else:
-            raise ValueError("You are not allowed to update this resource")
+        admin = admin_role_check(get_current_user.role)
+        if not admin:
+            raise ValueError(SystemMessages.ERROR_PERMISSION_DENIED)
+        
+        await task_crud.remove(db, id=int(task_id))
+ 
+        return {"message": f"Task deleted successfully by {get_current_user.id}"}
+    
     except ValueError as e:
-        log.warning(
-            f"Unauthorized update attempt for instance id {task_id} by this user"
-        )
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
+        log.warning(f"{SystemMessages.WARNING_UNAUTHORIZED_TASK_UPDATE} {id}")
+
+        raise HTTPException(status_code=_status.HTTP_403_FORBIDDEN, detail=str(e))
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_DELETE_TASK} {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_DELETE_TASK} {str(e)}",
         )
 
 
 @router.put(
     "/task-delete-request/{task_id}",
-    status_code=status.HTTP_200_OK,
+    status_code=_status.HTTP_200_OK,
     response_model=TaskInDB,
 )
 async def request_delete_task(
     task_id: int,
     db: AsyncSession = Depends(get_db),
-    token_data: TokenData = Depends(get_token_data),
+    get_current_user: TokenData = Depends(get_token_data),
 ):
-    log.info(f"{SystemMessages.LOG_TASK_DELETE_REQUEST.format(task_id=task_id)}")
     try:
         db_task = await task_crud.get_by_id(db=db, id=task_id)
 
-        if int(token_data.id) == db_task.owner_id or token_data.role == "admin":
-            updated_task = await task_crud.update(
-                db, db_obj=db_task, obj_in={"delete_request": True}
-            )
-            log.info(
-                f"{SystemMessages.LOG_TASK_DELETE_REQUEST_SUCCESS.format(task_id=task_id)}"
-            )
-            return updated_task
-        else:
-            raise ValueError("Unauthorized attempt")
+        if is_task_owner_or_admin(get_current_user.id, db_task.owner_id, get_current_user.role):
+            raise ValueError(SystemMessages.ERROR_UNAUTHORIZED_ATTEMPT)
+        
+        updated_task = await task_crud.update(
+            db, db_obj=db_task, obj_in={"delete_request": True}
+        )
+        log.info(
+            f"{SystemMessages.LOG_TASK_DELETE_REQUEST_SUCCESS.format(task_id=task_id)}"
+        )
+ 
+        return updated_task
 
     except ValueError:
-        log.warning(f"Unauthorized attempt to update instance with id: {id}")
+        log.warning(f"{SystemMessages.WARNING_UNAUTHORIZED_TASK_UPDATE} {id}")
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="You do not have permission to update this resource",
+            status_code=_status.HTTP_401_UNAUTHORIZED,
+            detail=SystemMessages.ERROR_PERMISSION_DENIED,
         )
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_FAILED_TO_REQUEST_DELETE_TASK} {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=_status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"{SystemMessages.ERROR_FAILED_TO_REQUEST_DELETE_TASK} {str(e)}",
         )

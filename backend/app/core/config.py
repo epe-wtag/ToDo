@@ -3,16 +3,16 @@ import traceback
 
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from logger import log
 from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from logger import log
-
 load_dotenv()
 
+#load and manage application configuration from environment variables
 class Settings(BaseSettings):
     model_config = ConfigDict(case_sensitive=True)
     
@@ -28,8 +28,8 @@ class Settings(BaseSettings):
     VERIFICATION_KEY: str = os.getenv("VERIFICATION_KEY")
     RESET_PASSWORD_KEY: str = os.getenv("RESET_PASSWORD_KEY")
 
-settings = Settings()
 
+settings = Settings()
 
 
 origins = [
@@ -50,7 +50,7 @@ def cors_middleware(app):
         allow_headers=["*"],
     )
 
-
+#inherits from BaseHTTPMiddleware, it catches unhandled exceptions during HTTP request processing and logs them
 class LogExceptionsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         try:

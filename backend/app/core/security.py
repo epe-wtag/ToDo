@@ -4,26 +4,21 @@ from typing import Optional
 from fastapi import Cookie, Depends, FastAPI, HTTPException, Response, status
 from fastapi.security import HTTPBearer
 from jose import jwt
-
-from app.core.config import settings
-from app.model.base_model import User
-from app.schema.auth_schema import TokenData
-from app.util.hash import async_hash_password, verify_password
 from logger import log
 
+from app.core.config import settings
+from app.core.constants import SystemMessages
+from app.model.base import User
+from app.schema.auth import TokenData
+from app.util.hash import verify_password
+
 app = FastAPI()
-
-
 bearer_scheme = HTTPBearer()
 
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 300
 TOKEN_EXPIRE_MINUTES = 30
-
-
-def hash_password(password: str) -> str:
-    return async_hash_password(password)
 
 
 def create_access_token(data: dict, secret_key: str = settings.SECRET_KEY) -> str:
@@ -33,9 +28,20 @@ def create_access_token(data: dict, secret_key: str = settings.SECRET_KEY) -> st
 
 
 def generate_verification_token(email: str) -> str:
-    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
+    expiration_time = datetime.now(timezone.utc) + timedelta(
+        minutes=TOKEN_EXPIRE_MINUTES
+    )
     payload = {"email": email, "exp": expiration_time}
     token = jwt.encode(payload, settings.VERIFICATION_KEY, algorithm=ALGORITHM)
+    return token
+
+
+def generate_reset_token(email: str) -> str:
+    expiration_time = datetime.now(timezone.utc) + timedelta(
+        minutes=TOKEN_EXPIRE_MINUTES
+    )
+    payload = {"email": email, "exp": expiration_time}
+    token = jwt.encode(payload, settings.RESET_PASSWORD_KEY, algorithm=ALGORITHM)
     return token
 
 
@@ -51,16 +57,12 @@ def get_token_data(
     token: Optional[str] = Cookie("token", secure=True, httponly=True),
     response: Response = None,
 ) -> TokenData:
-    if not token or token == "token" or token is None:
-        if response is not None:
-            response.delete_cookie("id")
-            response.delete_cookie("is_admin")
-            response.headers.update({"WWW-Authenticate": "Bearer"})
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token is missing",
-                headers=response.headers,
-            )
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=SystemMessages.ERROR_UNAUTHORIZED_ATTEMPT,
+            headers=response.headers,
+        )
 
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
@@ -68,22 +70,15 @@ def get_token_data(
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired",
+            detail=SystemMessages.ERROR_EXPIRED_SESSION,
             headers={"WWW-Authenticate": "Bearer"},
         )
     except (jwt.JWTError, KeyError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
+            detail=SystemMessages.ERROR_VALIDATION,
             headers={"WWW-Authenticate": "Bearer"},
         )
-
-
-def generate_reset_token(email: str) -> str:
-    expiration_time = datetime.now(timezone.utc) + timedelta(minutes=TOKEN_EXPIRE_MINUTES)
-    payload = {"email": email, "exp": expiration_time}
-    token = jwt.encode(payload, settings.RESET_PASSWORD_KEY, algorithm=ALGORITHM)
-    return token
 
 
 def verify_token(email: str, token: str) -> bool:
@@ -93,8 +88,8 @@ def verify_token(email: str, token: str) -> bool:
         expiration = payload.get("exp")
         if not response_email or not expiration:
             return False
-        expiration_datetime = datetime.utcfromtimestamp(expiration)
-        if expiration_datetime < datetime.utcnow():
+        expiration_datetime = datetime.fromtimestamp(expiration, timezone.utc)
+        if expiration_datetime < datetime.now(timezone.utc):
             return False
         return response_email == email
     except jwt.JWTError:
@@ -123,4 +118,3 @@ def verify_reset_token(email: str, token: str) -> bool:
 
 def get_current_user(token_data: TokenData = Depends(get_token_data)) -> str:
     return token_data.id
-

@@ -39,7 +39,7 @@ def load_template(template_name: str, context: dict) -> str:
 
 async def simple_send(email: EmailStr, token: str) -> JSONResponse:
     verify_url = f"http://127.0.0.1:8000/api/v1/auth/verify?email={email}&token={token}"
-    context = {"verify_url": verify_url, "email": email, "token": token}
+    context = {"verify_url": verify_url}
     html = load_template("verification_email.html", context)
 
     message = MessageSchema(

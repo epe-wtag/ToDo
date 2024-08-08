@@ -1,15 +1,14 @@
 import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy import pool
-from sqlalchemy.ext.asyncio import create_async_engine
-
 from alembic import context
 
 # Import your models' metadata object
 from app.db.database import (
     Base,
 )
+from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import create_async_engine
 
 # This is the Alembic Config object, which provides access to the values within the .ini file in use.
 config = context.config

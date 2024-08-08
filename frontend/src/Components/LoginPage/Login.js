@@ -25,11 +25,7 @@ const Login = () => {
     
         const errors = {};
 
-        if (!password.trim()) {
-            errors.password = "Password is required";
-        } else if (password.trim().length < 4) {
-            errors.password = "Password must be at least 4 characters long";
-        }
+        
  
         if (Object.keys(errors).length > 0) {
             console.log(errors);

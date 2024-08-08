@@ -13,17 +13,47 @@ const ResetPassword = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+
+  const isValidPassword = (password) => {
+    const minLength = 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+    return password.length >= minLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errors = {};
 
+    if (!isValidPassword(password)) {
+      Swal.fire({
+          icon: 'error',
+          title: 'Invalid Password',
+          text: 'Password must be at least 8 characters long and include an uppercase letter, a lowercase letter, a number, and a special character',
+      });
+      return;
+  }
+
     if (password !== confirmPassword) {
-        errors.password = "Password and Confirm Password do not match";
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Password',
+        text: 'Password and Confirm Password do not match',
+    });
+    return;
     }
     if (!password.trim()) {
         errors.password = "Password is required";
     } else if (password.trim().length < 4) {
-        errors.password = "Password must be at least 4 characters long";
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Password',
+        text: 'Password must be at least 4 characters long',
+    });
+    return;
     }
 
     if (Object.keys(errors).length > 0) {

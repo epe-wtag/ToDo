@@ -2,16 +2,21 @@ from enum import Enum
 from typing import Type
 
 from fastapi import HTTPException, status
-
-from app.model.base_model import User
 from logger import log
 
+from app.core.constants import SystemMessages
+from app.model.base import User
 
-def admin_role_check(user_role: str):
-    if user_role != "admin":
-        return False
-    else:
-        return True
+
+def admin_role_check(user_role: str) -> bool:
+    return user_role == SystemMessages.ADMIN
+
+    
+def is_task_owner_or_admin(user_id: int, owner_id: int, user_role: str) -> bool:
+    return int(user_id) != int(owner_id) and user_role != SystemMessages.ADMIN
+
+def is_user_or_admin(user_id: int, id: int, user_role: str) -> bool:
+    return int(user_id) != int(id) and user_role != SystemMessages.ADMIN
 
 
 def validate_and_convert_enum_value(value: str, enum_type: Type[Enum]) -> Enum:

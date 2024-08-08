@@ -1,10 +1,9 @@
-from dotenv import load_dotenv
-from fastapi import FastAPI
-from loguru import logger
-
 from app.api.v1.routes import routers as v1_routers
 from app.core.config import LogExceptionsMiddleware, cors_middleware
 from app.db.database import create_all_tables
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from loguru import logger
 
 logger.add(
     "caselog.log",
@@ -14,12 +13,18 @@ logger.add(
 )
 
 
-load_dotenv()
+load_dotenv()  # not used in production
 
 app = FastAPI()
 
-app.add_middleware(cors_middleware)
-app.add_middleware(LogExceptionsMiddleware)
+app.add_middleware(cors_middleware)  # to enable Cross-Domain Requests
+app.add_middleware(LogExceptionsMiddleware)     # applied to catch and log unhandled exceptions that occur during request processing
+
+
+# example of unhandled error handling
+# @app.get("/")
+# async def read_root():
+#     raise RuntimeError("Example error")
 
 
 @app.get("/")
@@ -28,8 +33,9 @@ def root():
     return "To-Do is working"
 
 
+# to define tasks that should be executed when the application starts
 class Startup:
-    async def on_startup(self):
+    async def on_startup(self):  
         await create_all_tables
 
 

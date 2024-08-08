@@ -14,6 +14,21 @@ const CreateTask = () => {
 
     let navigate = useNavigate();
 
+    const handleDateChange = (e) => {
+        const selectedDate = e.target.value;
+        const currentDate = new Date().toISOString().split('T')[0];
+
+        if (selectedDate < currentDate) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Due Date',
+                text: 'Due date cannot be a past date. Please select a valid date.',
+            });
+        } else {
+            setDueDate(selectedDate);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -38,7 +53,7 @@ const CreateTask = () => {
             }
 
 
-            const response = await fetch('/api/v1/task/tasks/', requestOption);
+            const response = await fetch('/api/v1/task/create-tasks/', requestOption);
             if (response.ok) {
                 const data = await response.json();
                 Swal.fire({
@@ -54,12 +69,20 @@ const CreateTask = () => {
                 setCategory('low');
                 navigate('/home');
             } else {
-                console.error('Error creating task:', response.statusText);
+                const errorData = await response.json();
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed to Create Task',
+                    text: errorData.detail[0].msg || 'Unknown error occurred',
+                    confirmButtonText: 'OK'
+                });
             }
         } catch (error) {
             console.error('Error creating task:', error);
         }
     };
+
+    const today = new Date().toISOString().split('T')[0];
 
     return (
         <>
@@ -93,14 +116,15 @@ const CreateTask = () => {
                             <label htmlFor="dueDate">Due Date:</label>
                             <input
                                 type="date"
+                                min={today}
                                 id="dueDate"
                                 value={dueDate}
-                                onChange={(e) => setDueDate(e.target.value)}
+                                onChange={handleDateChange}
                             />
                         </div>
 
                         <div className="form-group">
-                            <label className="label-cat" htmlFor="category">Category:</label>
+                            <label className="label-cat" htmlFor="category">Priority:</label>
                             <select
                                 className="select-cat"
                                 id="category"

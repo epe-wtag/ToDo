@@ -1,9 +1,10 @@
 import json
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.exc import NoResultFound
-from sqlalchemy.exc import IntegrityError
+from logger import log
+from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import SystemMessages
@@ -19,11 +20,24 @@ from app.core.security import (
     verify_token,
 )
 from app.core.service import send_reset_email, send_verification_email
-from app.db.crud.crud_auth import user_crud
+from app.db.crud.auth import user_crud
 from app.db.database import get_db
-from app.schema.auth_schema import ForgetPassword, ForgetPasswordMessage, LogInMessage, LogOutMessage, PasswordChangeMessage, ResetPasswordMessage, TokenData, UserChangePassword, UserCreate, UserInResponse, UserLogin, UserPassReset, VerifyMessage
+from app.schema.auth import (
+    ForgetPassword,
+    ForgetPasswordMessage,
+    LogInMessage,
+    LogOutMessage,
+    PasswordChangeMessage,
+    ResetPasswordMessage,
+    TokenData,
+    UserChangePassword,
+    UserCreate,
+    UserInResponse,
+    UserLogin,
+    UserPassReset,
+    VerifyMessage,
+)
 from app.util.hash import async_hash_password, verify_password
-from logger import log
 
 router = APIRouter(prefix="/auth", tags=["Authentication:"])
 
@@ -32,31 +46,40 @@ templates = Jinja2Templates(directory="app/templates")
 
 @router.post(
     "/create-user",
-    status_code=status.HTTP_201_CREATED,
     response_model=UserInResponse,
+    status_code=status.HTTP_201_CREATED,
     description="Create a new user",
 )
 async def create_user(
-    user_in: UserCreate,
+    user_input: UserCreate,
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        user = await user_crud.create(db, obj_in=user_in)
-        log.info(SystemMessages.SUCCESS_USER_CREATED, user)
-        await send_verification_email(user.email)
-        return user
-
+        user = await user_crud.create(db, obj_in=user_input)
+        try:
+            await send_verification_email(user.email)
+            log.info(SystemMessages.SUCCESS_USER_CREATED, user)
+            return user
+        
+        except Exception as error:
+            log.error(f"Failed to send verification email: {error}")
+            await user_crud.remove(db, id=int(user.id))
+            raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=SystemMessages.ERROR_CREATE_USER_FAILED,
+        )
+            
     except IntegrityError as e:
         log.error(f"{SystemMessages.ERROR_CREATE_USER}: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username or email already exists"
+            detail=SystemMessages.ERROR_USER_ALREADY_EXIST,
         )
 
     except Exception as e:
         log.error(f"{SystemMessages.ERROR_CREATE_USER}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=SystemMessages.ERROR_CREATE_USER_DETAIL,
         )
 
@@ -69,34 +92,40 @@ async def create_user(
 )
 async def verify_email(
     request: Request,
-    email: str ,
-    token: str ,
+    email: str,
+    token: str,
     db: AsyncSession = Depends(get_db),
 ):
     try:
         verification_result = verify_token(email, token)
-
-        if verification_result:
-            user = await user_crud.get_by_email(db, email=email)
-
-            if user:
-                user.is_active = True
-                await db.commit()
-
-                return templates.TemplateResponse(
-                    "verification_result.html",
-                    {"request": request, "verification_result": verification_result},
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"{SystemMessages.ERROR_USER_NOT_FOUND} {email}",
-                )
-        else:
+        
+        if not verification_result:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=SystemMessages.ERROR_VERIFICATION_FAILED,
             )
+        user = await user_crud.get_by_email(db, email=email)
+        
+        if not user:
+            raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"{SystemMessages.ERROR_USER_NOT_FOUND} {email}",
+                )
+        
+        user.is_active = True
+        await db.commit()
+
+        html_content = templates.TemplateResponse(
+            "verification_result.html",
+            {"request": request, "verification_result": verification_result},
+        )
+        
+        return HTMLResponse(
+            content=html_content.body.decode("utf-8"),
+            status_code=status.HTTP_200_OK
+        )
+            
+        
     except Exception:
         log.error(SystemMessages.ERROR_INTERNAL_SERVER)
         raise HTTPException(
@@ -107,19 +136,17 @@ async def verify_email(
 
 @router.post(
     "/login",
-    status_code=status.HTTP_200_OK,
     response_model=LogInMessage,
+    status_code=status.HTTP_200_OK,
     description="User login",
 )
 async def login(
-    user_in: UserLogin,
+    user_input: UserLogin,
     db: AsyncSession = Depends(get_db),
 ):
-    username = user_in.username
-    password = user_in.password
-    
-    log.info(f"{SystemMessages.LOG_ATTEMPT_LOGIN} {username}")
-    
+    username = user_input.username
+    password = user_input.password
+
     try:
         user = await user_crud.get_by_username(db, username=username)
         if user is None:
@@ -146,7 +173,7 @@ async def login(
             )
 
         access_token = create_access_token(data={"user_id": user.id, "role": user.role})
-        is_admin = 1 if user.role == "admin" else 0
+        is_admin = 1 if user.role == SystemMessages.ADMIN else 0
 
         response_content = {"id": user.id, "is_admin": is_admin}
         response = Response(
@@ -170,10 +197,6 @@ async def login(
             detail=SystemMessages.ERROR_USER_NOT_FOUND,
         )
 
-    except HTTPException as http_err:
-        log.error(f"{SystemMessages.LOG_HTTP_EXCEPTION} {http_err.detail}")
-        raise
-
     except Exception as e:
         log.error(f"{SystemMessages.LOG_USER_LOGIN_FAILED} {e}")
         raise HTTPException(
@@ -184,8 +207,8 @@ async def login(
 
 @router.post(
     "/logout",
-    status_code=status.HTTP_200_OK,
     response_model=LogOutMessage,
+    status_code=status.HTTP_200_OK,
     description="User logout",
 )
 async def logout(response: Response):
@@ -196,18 +219,13 @@ async def logout(response: Response):
 
 @router.post(
     "/forget-password",
-    status_code=status.HTTP_200_OK,
     response_model=ForgetPasswordMessage,
+    status_code=status.HTTP_200_OK,
     description="Forget password",
 )
-async def forget_password(
-    input: ForgetPassword, 
-    db: AsyncSession = Depends(get_db)
-    ):
-    email = input.email
-    
-    log.info(f"{SystemMessages.LOG_SENDING_RESET_EMAIL} {email}")
-    
+async def forget_password(input_data: ForgetPassword, db: AsyncSession = Depends(get_db)):
+    email = input_data.email
+
     try:
         user = await user_crud.get_by_email(db, email=email)
 
@@ -234,19 +252,18 @@ async def forget_password(
 
 @router.post(
     "/reset-password",
-    status_code=status.HTTP_200_OK,
     response_model=ResetPasswordMessage,
+    status_code=status.HTTP_200_OK,
     description="Reset password",
 )
 async def reset_password(
-    input: UserPassReset,
+    input_data: UserPassReset,
     db: AsyncSession = Depends(get_db),
 ):
-    email = input.email
-    password = input.password
-    token = input.token
-    
-    log.info(f"{SystemMessages.LOG_RESET_PASSWORD_ATTEMPT} {email}")
+    email = input_data.email
+    password = input_data.password
+    token = input_data.token
+
     try:
         verification_result = verify_reset_token(email, token)
 
@@ -264,6 +281,7 @@ async def reset_password(
 
         await db.commit()
         log.info(f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}")
+
 
         return {"message": f"{SystemMessages.SUCCESS_PASSWORD_RESETFUL} {email}"}
 
@@ -284,25 +302,24 @@ async def reset_password(
 
 @router.post(
     "/change-password",
-    status_code=status.HTTP_200_OK,
     response_model=PasswordChangeMessage,
+    status_code=status.HTTP_200_OK,
     description="Change password",
 )
 async def change_password(
     response: Response,
-    input: UserChangePassword,
-    token_data: TokenData = Depends(get_token_data),
+    input_data: UserChangePassword,
+    get_current_user: TokenData = Depends(get_token_data),
     db: AsyncSession = Depends(get_db),
 ):
-    old_password = input.old_password
-    new_password = input.new_password
-    log.info(f"{SystemMessages.LOG_CHANGE_PASSWORD_ATTEMPT} {token_data.id}")
+    old_password = input_data.old_password
+    new_password = input_data.new_password
     try:
-        user_id = int(token_data.id)
+        user_id = int(get_current_user.id)
         user = await user_crud.get(db, int(user_id))
 
         verify_old_password(user, old_password)
-        check_user_active(user)
+        await check_user_active(user)
 
         hashed_password = async_hash_password(new_password)
         await user_crud.update(db=db, db_obj=user, obj_in={"password": hashed_password})
