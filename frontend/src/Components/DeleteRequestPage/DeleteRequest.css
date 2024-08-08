@@ -1,0 +1,96 @@
+.cards-container-delete-page {
+    margin-bottom: 20%;
+    margin-top: 0;
+    padding-top: 0;
+    overflow-x: hidden;
+    width: 100%;
+    height: fit-content;
+    background-color: #F8F9FF;
+}
+
+.h2-delete {
+    font-size: 44px;
+    color: #7A8DFD;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #7A8DFD;
+}
+
+.pagination-controls {
+    position: absolute;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    padding-left: 10px;
+    bottom: 30px;
+    width: 80%;
+    background-color: #deececb6;
+    margin-left: 12%;
+    border-radius: 35px;
+}
+
+.pagination-controls button {
+    background-color: #7A8DFD;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin: 0 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 30%;
+}
+
+.pagination-controls button:disabled {
+    background-color: #888282;
+    cursor: not-allowed;
+}
+
+.pagination-controls span {
+    font-size: 16px;
+    color: #333;
+}
+
+.search-bar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin: 20px 0;
+}
+
+.search-bar form {
+    display: flex;
+    align-items: center;
+    width: 80%;
+}
+
+.search-bar input[type="text"] {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    margin-right: 10px;
+    font-size: 16px;
+    width: 75%;
+}
+
+.search-bar button {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 20%;
+}
+
+.search-bar button[type="submit"] {
+    background-color: #7A8DFD;
+    color: white;
+}
+
+.search-bar button[type="submit"]:hover,
+.search-bar button[type="button"]:hover {
+    background-color: #1d2655;
+    color: white;
+}

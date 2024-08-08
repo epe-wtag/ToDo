@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - database
+    restart: on-failure
+    environment:
+      - DB_URL=true
+    volumes:
+      - ./logs:/logs
+
+  database:
+    image: postgres:15.6
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_DB=todo
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=marmaidarmy
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    volumes:
+      - postgres_data1:/var/lib/postgresql/data
+  smtp-service:
+    image: axllent/mailpit
+    restart: unless-stopped
+    container_name: smtp
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  postgres_data1:
